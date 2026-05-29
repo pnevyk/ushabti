@@ -14,21 +14,19 @@ export async function run(argv) {
         },
     });
 
-    const missing = ["repo", "pr", "out"].filter((key) => !values[key]);
-    if (missing.length) {
-        throw new CliError(`Missing required options: ${missing.map((key) => `--${key}`).join(", ")}`);
-    }
-
-    const pr = Number(values.pr);
-    if (!Number.isInteger(pr) || pr <= 0) {
-        throw new CliError(`Invalid --pr: ${values.pr}`);
+    let pr = null;
+    if (values.pr != null) {
+        pr = Number(values.pr);
+        if (!Number.isInteger(pr) || pr <= 0) {
+            throw new CliError(`Invalid --pr: ${values.pr}`);
+        }
     }
 
     const config = loadConfig(values.config);
     await fetchUnresolvedComments({
-        repo: values.repo,
+        repo: values.repo ?? null,
         pr,
-        out: values.out,
+        out: values.out ?? "pr-comments.ushabti.json",
         config,
     });
 }

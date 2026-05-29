@@ -1,5 +1,7 @@
 import { requireKeys } from "../../shared/config.js";
+import { CliError } from "../../shared/errors.js";
 import { createGithubClient } from "../../shared/github-client.js";
+import { currentRepo, currentBranch } from "../../shared/git.js";
 import { serialize } from "../../shared/output/json.js";
 import { write } from "../../shared/output/file.js";
 
@@ -34,8 +36,20 @@ query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
 // keep unresolved, serialize, write to `out`.
 export async function fetchUnresolvedComments({ repo, pr, out, config }) {
     requireKeys(config, ["github.token"]);
+
+    if (repo == null) {
+        try {
+            repo = currentRepo();
+        } catch {
+            throw new CliError("Could not determine repo from git; pass --repo <owner/name>");
+        }
+    }
     const [owner, name] = repo.split("/");
     const client = createGithubClient(config);
+
+    if (pr == null) {
+        pr = await resolvePrForBranch(client, owner, name);
+    }
 
     const nodes = [];
     let cursor = null;
@@ -48,6 +62,35 @@ export async function fetchUnresolvedComments({ repo, pr, out, config }) {
 
     const threads = toThreads(nodes);
     await write(out, serialize({ threads }));
+}
+
+// Find the sole open PR whose head branch is the current git branch.
+async function resolvePrForBranch(client, owner, name) {
+    let branch;
+    try {
+        branch = currentBranch();
+    } catch {
+        throw new CliError("Could not determine branch from git; pass --pr <n>");
+    }
+    const prs = await client.paginate(client.rest.pulls.list, {
+        owner,
+        repo: name,
+        state: "open",
+        per_page: 100,
+    });
+    return pickPr(prs, branch);
+}
+
+// Pure: select the unique open PR matching the branch. Exported for tests.
+export function pickPr(prs, branch) {
+    const matches = prs.filter((pr) => pr.head.ref === branch);
+    if (matches.length === 0) {
+        throw new CliError(`No open PR found for branch ${branch}`);
+    }
+    if (matches.length > 1) {
+        throw new CliError(`Multiple open PRs for branch ${branch}; pass --pr <n>`);
+    }
+    return matches[0].number;
 }
 
 // Pure transform: GraphQL reviewThreads.nodes -> minimal thread objects.
