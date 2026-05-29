@@ -10,3 +10,7 @@ test("unknown command throws CliError", async () => {
 test("help runs without error", async () => {
     await run(["--help"]);
 });
+
+test("subcommand help runs without dispatching the command", async () => {
+    await run(["pr", "comments", "--help"]);
+});

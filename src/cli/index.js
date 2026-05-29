@@ -1,4 +1,4 @@
-import { printHelp } from "./help.js";
+import { printHelp, printCommandHelp } from "./help.js";
 import { CliError } from "../shared/errors.js";
 import * as prComments from "../features/pr-comments/command.js";
 import * as jiraFetch from "../features/jira-fetch/command.js";
@@ -18,9 +18,15 @@ export async function run(argv) {
     }
 
     const [group, sub, ...rest] = argv;
-    const command = commands[`${group} ${sub}`];
+    const key = `${group} ${sub}`;
+    const command = commands[key];
     if (!command) {
         throw new CliError(`Unknown command: ${[group, sub].filter(Boolean).join(" ")}`);
+    }
+
+    if (rest.includes("-h") || rest.includes("--help")) {
+        printCommandHelp(key);
+        return;
     }
 
     await command.run(rest);
