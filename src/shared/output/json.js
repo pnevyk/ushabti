@@ -1,3 +1,4 @@
+// Compact (no indentation) to minimize tokens when fed to an agent.
 export function serialize(data) {
-    return JSON.stringify(data, null, 2);
+    return JSON.stringify(data);
 }
