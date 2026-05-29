@@ -1,0 +1,25 @@
+{
+  "name": "ushabti",
+  "version": "0.1.0",
+  "description": "CLI tool for automating little tasks of a software engineer",
+  "type": "module",
+  "bin": {
+    "ushabti": "bin/ushabti.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node bin/ushabti.js",
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.6.5",
+  "dependencies": {
+    "jira.js": "^5.3.1",
+    "octokit": "^5.0.5",
+    "smol-toml": "^1.6.1"
+  }
+}

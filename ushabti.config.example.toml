@@ -1,0 +1,7 @@
+[github]
+token = ""
+
+[jira]
+baseUrl = ""
+email = ""
+token = ""
