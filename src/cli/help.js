@@ -3,8 +3,8 @@ export function printHelp() {
 
 Usage:
   ushabti pr comments  [--pr <n>] [--repo <owner/name>] [--out <file>]
-  ushabti jira fetch   --project <key> --out <file>
-  ushabti jira create  --file <markdown>
+  ushabti jira fetch   --project <key> [--format json|markdown] [--out <path>]
+  ushabti jira create  --project <key> --file <markdown>
 
 pr comments defaults:
   --pr     the open PR for the current branch
@@ -29,21 +29,30 @@ Options:
   --out <file>          Output file (default: pr-comments.ushabti.json)
   --config <file>       Config file path
   -h, --help            Show this help`,
-    "jira fetch": `Usage: ushabti jira fetch --project <key> --out <file>
+    "jira fetch": `Usage: ushabti jira fetch --project <key> [--format json|markdown] [--out <path>]
 
-Fetch Jira tickets for a project into a file.
-
-Options:
-  --project <key>   Jira project key
-  --out <file>      Output file
-  --config <file>   Config file path
-  -h, --help        Show this help`,
-    "jira create": `Usage: ushabti jira create --file <markdown>
-
-Create a Jira ticket from a markdown file.
+Fetch all Jira tickets for a project.
 
 Options:
-  --file <markdown>   Markdown file describing the ticket
+  --project <key>          Jira project key (required)
+  --format json|markdown   Output format (default: json)
+  --out <path>             Output file (json) or directory (markdown)
+                           Default: jira-<project>.ushabti.json or jira-<project>/
+  --config <file>          Config file path
+  -h, --help               Show this help
+
+With --format markdown, writes one <ID>.md per ticket: YAML frontmatter
+(id, title, type, parent, storyPoints, assignee) plus the description body.`,
+    "jira create": `Usage: ushabti jira create --project <key> --file <markdown>
+
+Create a Jira ticket from a markdown file with YAML frontmatter.
+
+Frontmatter: title (required), type (required), parent, storyPoints, assignee
+(accountId) optional. The body becomes the ticket description.
+
+Options:
+  --project <key>     Jira project key (required)
+  --file <markdown>   Markdown file describing the ticket (required)
   --config <file>     Config file path
   -h, --help          Show this help`,
 };
