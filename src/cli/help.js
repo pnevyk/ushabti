@@ -5,6 +5,7 @@ Usage:
   ushabti pr comments  [--pr <n>] [--repo <owner/name>] [--out <file>]
   ushabti jira fetch   --project <key> [--format json|markdown] [--out <path>]
   ushabti jira create  --project <key> --file <markdown>
+  ushabti jira filter  --project <key> [--in <path>] [--where <expr>]
 
 pr comments defaults:
   --pr     the open PR for the current branch
@@ -55,6 +56,32 @@ Options:
   --file <markdown>   Markdown file describing the ticket (required)
   --config <file>     Config file path
   -h, --help          Show this help`,
+    "jira filter": `Usage: ushabti jira filter --project <key> [--in <path>] [--where <expr>]
+
+Filter locally fetched tickets and print matching ticket ids, one per line.
+
+Reads tickets from --in (a JSON file or a markdown directory, detected
+automatically). Without --in, defaults to jira-<project>.ushabti.json, then
+jira-<project>/.
+
+--where is a JavaScript expression evaluated per ticket; the ticket passes
+when it is truthy. Omit --where to print every ticket. These fields are in
+scope as variables: id, title, type, parent, assignee, storyPoints.
+
+Examples:
+  --where '!parent'                      tickets without a parent
+  --where 'assignee === "5b1f..."'       tickets assigned to an account
+  --where '!parent || !assignee'         no parent or unassigned
+  --where 'type === "Epic" && storyPoints > 3'
+
+Options:
+  --project <key>   Jira project key (required)
+  --in <path>       JSON file or markdown directory (default: project-derived)
+  --where <expr>    JavaScript filter expression (default: match all)
+  -h, --help        Show this help
+
+Note: --where is evaluated with new Function over local input; do not pass
+untrusted expressions.`,
 };
 
 export function printCommandHelp(key) {
