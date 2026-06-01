@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
 import { CliError } from "../../shared/errors.js";
-import { fetchUnresolvedComments } from "./service.js";
+import { fetchComments } from "./service.js";
 
 export async function run(argv) {
     const { values } = parseArgs({
@@ -10,6 +10,7 @@ export async function run(argv) {
             repo: { type: "string" },
             pr: { type: "string" },
             out: { type: "string" },
+            all: { type: "boolean" },
             config: { type: "string" },
         },
     });
@@ -23,10 +24,11 @@ export async function run(argv) {
     }
 
     const config = loadConfig(values.config);
-    await fetchUnresolvedComments({
+    await fetchComments({
         repo: values.repo ?? null,
         pr,
         out: values.out ?? "pr-comments.ushabti.json",
+        all: values.all ?? false,
         config,
     });
 }

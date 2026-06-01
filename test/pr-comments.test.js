@@ -31,6 +31,19 @@ test("drops resolved threads", () => {
     const threads = toThreads(nodes);
     assert.equal(threads.length, 1);
     assert.equal(threads[0].path, "b.js");
+    assert.equal(threads[0].resolved, false);
+});
+
+test("keeps resolved threads with includeResolved", () => {
+    const nodes = [
+        { isResolved: true, path: "a.js", line: 1, startLine: null, originalLine: null, originalStartLine: null, comments: { nodes: [] } },
+        { isResolved: false, path: "b.js", line: 2, startLine: null, originalLine: null, originalStartLine: null, comments: { nodes: [] } },
+    ];
+    const threads = toThreads(nodes, true);
+    assert.equal(threads.length, 2);
+    assert.equal(threads[0].path, "a.js");
+    assert.equal(threads[0].resolved, true);
+    assert.equal(threads[1].resolved, false);
 });
 
 test("maps comment fields and single-line range", () => {
@@ -52,6 +65,7 @@ test("maps comment fields and single-line range", () => {
     const [thread] = toThreads(nodes);
     assert.deepEqual(thread, {
         path: "src/foo.js",
+        resolved: false,
         startLine: 12,
         endLine: 12,
         diffHunk: "@@ -1 +1 @@\n-a\n+b",

@@ -33,8 +33,8 @@ query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
 }`;
 
 // Orchestrates: fetch all PR review threads via GitHub GraphQL (paginated),
-// keep unresolved, serialize, write to `out`.
-export async function fetchUnresolvedComments({ repo, pr, out, config }) {
+// keep unresolved (or all when `all`), serialize, write to `out`.
+export async function fetchComments({ repo, pr, out, all, config }) {
     requireKeys(config, ["github.token"]);
 
     if (repo == null) {
@@ -60,7 +60,7 @@ export async function fetchUnresolvedComments({ repo, pr, out, config }) {
         cursor = threads.pageInfo.hasNextPage ? threads.pageInfo.endCursor : null;
     } while (cursor);
 
-    const threads = toThreads(nodes);
+    const threads = toThreads(nodes, all);
     await write(out, serialize({ threads }));
 }
 
@@ -95,14 +95,15 @@ export function pickPr(prs, branch) {
 
 // Pure transform: GraphQL reviewThreads.nodes -> minimal thread objects.
 // Exported for unit testing without touching the network.
-export function toThreads(nodes) {
+export function toThreads(nodes, includeResolved) {
     return nodes
-        .filter((node) => !node.isResolved)
+        .filter((node) => includeResolved || !node.isResolved)
         .map((node) => {
             const endLine = node.line ?? node.originalLine ?? null;
             const startLine = node.startLine ?? node.originalStartLine ?? endLine;
             return {
                 path: node.path ?? null,
+                resolved: node.isResolved,
                 startLine,
                 endLine,
                 diffHunk: node.comments.nodes[0]?.diffHunk ?? null,

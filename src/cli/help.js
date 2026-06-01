@@ -2,7 +2,7 @@ export function printHelp() {
     console.log(`ushabti — automate little engineering tasks
 
 Usage:
-  ushabti pr comments  [--pr <n>] [--repo <owner/name>] [--out <file>]
+  ushabti pr comments  [--pr <n>] [--repo <owner/name>] [--out <file>] [--all]
   ushabti jira fetch   --project <key> [--format json|markdown] [--out <path>]
   ushabti jira create  --project <key> --file <markdown>
   ushabti jira filter  --project <key> [--in <path>] [--where <expr>]
@@ -20,7 +20,7 @@ Global options:
 
 // Per-command help, keyed by "<group> <sub>".
 const COMMAND_HELP = {
-    "pr comments": `Usage: ushabti pr comments [--pr <n>] [--repo <owner/name>] [--out <file>]
+    "pr comments": `Usage: ushabti pr comments [--pr <n>] [--repo <owner/name>] [--out <file>] [--all]
 
 Fetch unresolved review comment threads on a PR into a JSON file.
 
@@ -28,6 +28,7 @@ Options:
   --pr <n>              PR number (default: open PR for the current branch)
   --repo <owner/name>   Repository (default: git origin remote)
   --out <file>          Output file (default: pr-comments.ushabti.json)
+  --all                 Include resolved threads (default: unresolved only)
   --config <file>       Config file path
   -h, --help            Show this help`,
     "jira fetch": `Usage: ushabti jira fetch --project <key> [--format json|markdown] [--out <path>]
