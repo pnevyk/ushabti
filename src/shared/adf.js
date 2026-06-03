@@ -42,6 +42,8 @@ function renderBlock(node) {
             return renderList(node, "bullet");
         case "orderedList":
             return renderList(node, "ordered");
+        case "table":
+            return renderTable(node);
         default:
             return renderInline(node.content ?? []);
     }
@@ -57,6 +59,28 @@ function renderList(node, kind) {
             return marker + indentContinuation(inner, marker.length);
         })
         .join("\n");
+}
+
+// Render an ADF table as a GFM pipe table. The first row is treated as the
+// header (GFM requires one). Cell block content is flattened to a single line
+// since GFM cells cannot hold block structure.
+function renderTable(node) {
+    const rows = node.content ?? [];
+    if (!rows.length) {
+        return "";
+    }
+    const renderRow = (row) => `| ${(row.content ?? []).map(renderCell).join(" | ")} |`;
+    const columns = (rows[0].content ?? []).length;
+    const separator = `| ${Array(columns).fill("---").join(" | ")} |`;
+    const body = rows.slice(1).map(renderRow);
+    return [renderRow(rows[0]), separator, ...body].join("\n");
+}
+
+function renderCell(cell) {
+    return renderBlocks(cell.content ?? [])
+        .replace(/\s*\n+\s*/g, " ")
+        .replace(/\|/g, "\\|")
+        .trim();
 }
 
 function renderInline(nodes) {
@@ -133,12 +157,40 @@ export function markdownToAdf(source) {
             case "blockquote_open":
                 push(stack, { type: "blockquote", content: [] });
                 break;
+            case "table_open":
+                push(stack, { type: "table", content: [] });
+                break;
+            case "tr_open":
+                push(stack, { type: "tableRow", content: [] });
+                break;
+            case "th_open":
+                // Cells hold block content, but markdown-it emits inline tokens
+                // directly, so wrap each cell in a paragraph.
+                push(stack, { type: "tableHeader", attrs: {}, content: [] });
+                push(stack, { type: "paragraph", content: [] });
+                break;
+            case "td_open":
+                push(stack, { type: "tableCell", attrs: {}, content: [] });
+                push(stack, { type: "paragraph", content: [] });
+                break;
+            case "th_close":
+            case "td_close":
+                stack.pop(); // paragraph
+                stack.pop(); // cell
+                break;
+            case "thead_open":
+            case "thead_close":
+            case "tbody_open":
+            case "tbody_close":
+                break; // no ADF equivalent; rows attach directly to the table
             case "paragraph_close":
             case "heading_close":
             case "bullet_list_close":
             case "ordered_list_close":
             case "list_item_close":
             case "blockquote_close":
+            case "table_close":
+            case "tr_close":
                 stack.pop();
                 break;
             case "fence":

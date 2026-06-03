@@ -89,3 +89,33 @@ test("round-trip: markdown -> adf -> markdown preserves common structures", () =
     const src = "# Heading\n\nA **bold** and *italic* line.\n\n- one\n- two\n\n```js\nf();\n```";
     assert.equal(adfToMarkdown(markdownToAdf(src)), src);
 });
+
+test("markdownToAdf: table yields a valid ADF table, not orphan inline nodes", () => {
+    const adf = markdownToAdf("| Code | Meaning |\n| --- | --- |\n| a01 | Clear |");
+    assert.deepEqual(adf.content.map((n) => n.type), ["table"]);
+    const cell = (type, t) => ({ type, attrs: {}, content: [{ type: "paragraph", content: [text(t)] }] });
+    assert.deepEqual(adf.content[0], {
+        type: "table",
+        content: [
+            { type: "tableRow", content: [cell("tableHeader", "Code"), cell("tableHeader", "Meaning")] },
+            { type: "tableRow", content: [cell("tableCell", "a01"), cell("tableCell", "Clear")] },
+        ],
+    });
+});
+
+test("adfToMarkdown: table renders as a GFM pipe table", () => {
+    const cell = (type, t) => ({ type, content: [{ type: "paragraph", content: [text(t)] }] });
+    const adf = doc({
+        type: "table",
+        content: [
+            { type: "tableRow", content: [cell("tableHeader", "Code"), cell("tableHeader", "Meaning")] },
+            { type: "tableRow", content: [cell("tableCell", "a01"), cell("tableCell", "Clear")] },
+        ],
+    });
+    assert.equal(adfToMarkdown(adf), "| Code | Meaning |\n| --- | --- |\n| a01 | Clear |");
+});
+
+test("round-trip: markdown table survives adf conversion", () => {
+    const src = "| Code | Meaning |\n| --- | --- |\n| a01 | Clear |";
+    assert.equal(adfToMarkdown(markdownToAdf(src)), src);
+});
