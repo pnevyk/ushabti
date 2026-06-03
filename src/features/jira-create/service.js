@@ -1,13 +1,16 @@
-import { readFile } from "node:fs/promises";
+import { readFile, unlink } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { requireKeys } from "../../shared/config.js";
 import { CliError } from "../../shared/errors.js";
 import { createJiraClient } from "../../shared/jira-client.js";
 import { markdownToAdf } from "../../shared/adf.js";
-import { parse } from "../../shared/frontmatter.js";
+import { parse, stringify } from "../../shared/frontmatter.js";
+import { write } from "../../shared/output/file.js";
 
 // Orchestrates: read a markdown file, map frontmatter + body to a Jira issue,
-// create it, and report the new key.
-export async function createTicket({ file, project, config }) {
+// create it, and report the new key. With `update`, write the new key back
+// into the source file and rename it to <KEY>.md.
+export async function createTicket({ file, project, update, config }) {
     requireKeys(config, ["jira.baseUrl", "jira.email", "jira.token"]);
     const spField = config.jira.storyPointsField || null;
 
@@ -20,7 +23,25 @@ export async function createTicket({ file, project, config }) {
 
     const url = `${config.jira.baseUrl.replace(/\/$/, "")}/browse/${created.key}`;
     console.log(`Created ${created.key}: ${url}`);
+
+    if (update) {
+        const newPath = join(dirname(file), `${created.key}.md`);
+        await write(newPath, applyCreatedId({ data, body, key: created.key }));
+        if (newPath !== file) {
+            await unlink(file);
+        }
+        console.log(`Updated ${file} -> ${newPath}`);
+    }
+
     return created;
+}
+
+// Pure: re-serialize frontmatter + body with `id` set to the created key as the
+// first frontmatter field. Exported for tests.
+export function applyCreatedId({ data, body, key }) {
+    const next = { id: key, ...data };
+    next.id = key;
+    return stringify(next, body);
 }
 
 // Pure: frontmatter + body -> Jira createIssue `fields` payload. Exported for tests.

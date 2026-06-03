@@ -9,6 +9,7 @@ export async function run(argv) {
         options: {
             file: { type: "string" },
             project: { type: "string" },
+            update: { type: "boolean" },
             config: { type: "string" },
         },
     });
@@ -21,5 +22,10 @@ export async function run(argv) {
     }
 
     const config = loadConfig(values.config);
-    await createTicket({ file: values.file, project: values.project, config });
+    await createTicket({
+        file: values.file,
+        project: values.project,
+        update: values.update ?? false,
+        config,
+    });
 }

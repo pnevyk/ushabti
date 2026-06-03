@@ -4,7 +4,7 @@ export function printHelp() {
 Usage:
   ushabti pr comments  [--pr <n>] [--repo <owner/name>] [--out <file>] [--all]
   ushabti jira fetch   --project <key> [--format json|markdown] [--out <path>]
-  ushabti jira create  --project <key> --file <markdown>
+  ushabti jira create  --project <key> --file <markdown> [--update]
   ushabti jira filter  --project <key> [--in <path>] [--where <expr>]
 
 pr comments defaults:
@@ -45,7 +45,7 @@ Options:
 
 With --format markdown, writes one <ID>.md per ticket: YAML frontmatter
 (id, title, type, parent, storyPoints, assignee) plus the description body.`,
-    "jira create": `Usage: ushabti jira create --project <key> --file <markdown>
+    "jira create": `Usage: ushabti jira create --project <key> --file <markdown> [--update]
 
 Create a Jira ticket from a markdown file with YAML frontmatter.
 
@@ -55,6 +55,8 @@ Frontmatter: title (required), type (required), parent, storyPoints, assignee
 Options:
   --project <key>     Jira project key (required)
   --file <markdown>   Markdown file describing the ticket (required)
+  --update            After creation, write id into frontmatter and rename
+                      the file to <KEY>.md
   --config <file>     Config file path
   -h, --help          Show this help`,
     "jira filter": `Usage: ushabti jira filter --project <key> [--in <path>] [--where <expr>]
