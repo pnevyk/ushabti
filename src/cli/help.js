@@ -5,6 +5,7 @@ Usage:
   ushabti pr comments  [--pr <n>] [--repo <owner/name>] [--out <file>] [--all]
   ushabti jira fetch   --project <key> [--format json|markdown] [--out <path>]
   ushabti jira create  --project <key> --file <markdown> [--update]
+  ushabti jira update  --file <markdown>
   ushabti jira filter  --project <key> [--in <path>] [--where <expr>]
 
 pr comments defaults:
@@ -57,6 +58,21 @@ Options:
   --file <markdown>   Markdown file describing the ticket (required)
   --update            After creation, write id into frontmatter and rename
                       the file to <KEY>.md
+  --config <file>     Config file path
+  -h, --help          Show this help`,
+    "jira update": `Usage: ushabti jira update --file <markdown>
+
+Update an existing Jira ticket from a markdown file with YAML frontmatter.
+
+The issue key is read from frontmatter \`id\` (as written by \`jira create
+--update\` or \`jira fetch --format markdown\`). All fields are optional; only
+those present are updated, the rest are left unchanged.
+
+Frontmatter: id (required), title, type, parent, storyPoints, assignee
+(accountId) optional. The body becomes the ticket description.
+
+Options:
+  --file <markdown>   Markdown file describing the update (required)
   --config <file>     Config file path
   -h, --help          Show this help`,
     "jira filter": `Usage: ushabti jira filter --project <key> [--in <path>] [--where <expr>]
