@@ -3,6 +3,7 @@ export function printHelp() {
 
 Usage:
   ushabti pr comments  [--pr <n>] [--repo <owner/name>] [--out <file>] [--all]
+  ushabti pr digest    --since <date> [--until <date>] [--repo <owner/name>] [--out <file>]
   ushabti jira fetch   --project <key> [--format json|markdown] [--out <path>]
   ushabti jira create  --project <key> --file <markdown> [--update]
   ushabti jira update  --file <markdown>
@@ -32,6 +33,25 @@ Options:
   --all                 Include resolved threads (default: unresolved only)
   --config <file>       Config file path
   -h, --help            Show this help`,
+    "pr digest": `Usage: ushabti pr digest --since <date> [--until <date>] [--repo <owner/name>] [--out <file>]
+
+Fetch all PRs merged in a date window, each with its reviews, inline review
+comments and conversation comments, into one JSON file.
+
+Dates are YYYY-MM-DD or ISO datetime (e.g. 2026-06-01T00:00:00Z). The window
+filters on merge date and only merged PRs are included. A matched PR's full
+comment history is included regardless of when individual comments were made.
+
+Options:
+  --since <date>        Window start (required)
+  --until <date>        Window end (default: open-ended)
+  --repo <owner/name>   Repository (default: git origin remote)
+  --out <file>          Output file (default: pr-digest.ushabti.json)
+  --config <file>       Config file path
+  -h, --help            Show this help
+
+Note: GitHub search returns at most 1000 results; narrow the window for very
+busy repositories.`,
     "jira fetch": `Usage: ushabti jira fetch --project <key> [--format json|markdown] [--out <path>]
 
 Fetch all Jira tickets for a project.
