@@ -1,22 +1,21 @@
 export function printHelp() {
     console.log(`ushabti — automate little engineering tasks
 
-Usage:
-  ushabti pr comments  [--pr <n>] [--repo <owner/name>] [--out <file>] [--all]
-  ushabti pr digest    --since <date> [--until <date>] [--repo <owner/name>] [--out <file>]
-  ushabti jira fetch   --project <key> [--format json|markdown] [--out <path>]
-  ushabti jira create  --project <key> --file <markdown> [--update]
-  ushabti jira update  --file <markdown>
-  ushabti jira filter  --project <key> [--in <path>] [--where <expr>]
+Usage: ushabti <group> <command> [options]
 
-pr comments defaults:
-  --pr     the open PR for the current branch
-  --repo   git origin remote
-  --out    pr-comments.ushabti.json
+Commands:
+  pr comments    Fetch unresolved PR review threads to JSON
+  pr digest      Fetch merged-PR history in a date window to JSON
+  jira fetch     Fetch a project's tickets to JSON or markdown
+  jira create    Create a Jira ticket from a markdown file
+  jira update    Update a Jira ticket from a markdown file
+  jira filter    Filter locally fetched tickets by a JS expression
+
+Run \`ushabti <group> <command> --help\` for options and examples.
 
 Global options:
-  -h, --help     Show this help (also per command: ushabti <group> <sub> --help)
-  --config       Path to config file (default: ./ushabti.config.toml, then ~/.config/ushabti/config.toml)
+  -h, --help     Show this help
+  --config       Config file (default: ./ushabti.config.toml, then ~/.config/ushabti/config.toml)
 `);
 }
 
@@ -25,6 +24,11 @@ const COMMAND_HELP = {
     "pr comments": `Usage: ushabti pr comments [--pr <n>] [--repo <owner/name>] [--out <file>] [--all]
 
 Fetch unresolved review comment threads on a PR into a JSON file.
+
+Examples:
+  ushabti pr comments                                  current branch's open PR
+  ushabti pr comments --pr 42 --all                    specific PR, include resolved
+  ushabti pr comments --repo acme/widget --out cr.json
 
 Options:
   --pr <n>              PR number (default: open PR for the current branch)
@@ -35,12 +39,17 @@ Options:
   -h, --help            Show this help`,
     "pr digest": `Usage: ushabti pr digest --since <date> [--until <date>] [--repo <owner/name>] [--out <file>]
 
-Fetch all PRs merged in a date window, each with its reviews, inline review
+Fetch every PR merged in a date window, each with its reviews, inline review
 comments and conversation comments, into one JSON file.
 
 Dates are YYYY-MM-DD or ISO datetime (e.g. 2026-06-01T00:00:00Z). The window
-filters on merge date and only merged PRs are included. A matched PR's full
-comment history is included regardless of when individual comments were made.
+filters on merge date; a matched PR's full comment history is included
+regardless of when individual comments were made.
+
+Examples:
+  ushabti pr digest --since 2026-06-01
+  ushabti pr digest --since 2026-06-01 --until 2026-06-15
+  ushabti pr digest --since 2026-06-01 --repo acme/widget --out sprint.json
 
 Options:
   --since <date>        Window start (required)
@@ -56,22 +65,31 @@ busy repositories.`,
 
 Fetch all Jira tickets for a project.
 
+With --format markdown, writes one <ID>.md per ticket: YAML frontmatter
+(id, title, type, parent, storyPoints, assignee) plus the description body.
+
+Examples:
+  ushabti jira fetch --project ABC
+  ushabti jira fetch --project ABC --format markdown
+  ushabti jira fetch --project ABC --format markdown --out ./tickets
+
 Options:
   --project <key>          Jira project key (required)
   --format json|markdown   Output format (default: json)
   --out <path>             Output file (json) or directory (markdown)
                            Default: jira-<project>.ushabti.json or jira-<project>/
   --config <file>          Config file path
-  -h, --help               Show this help
-
-With --format markdown, writes one <ID>.md per ticket: YAML frontmatter
-(id, title, type, parent, storyPoints, assignee) plus the description body.`,
+  -h, --help               Show this help`,
     "jira create": `Usage: ushabti jira create --project <key> --file <markdown> [--update]
 
 Create a Jira ticket from a markdown file with YAML frontmatter.
 
 Frontmatter: title (required), type (required), parent, storyPoints, assignee
 (accountId) optional. The body becomes the ticket description.
+
+Examples:
+  ushabti jira create --project ABC --file ticket.md
+  ushabti jira create --project ABC --file ticket.md --update
 
 Options:
   --project <key>     Jira project key (required)
@@ -91,6 +109,9 @@ those present are updated, the rest are left unchanged.
 Frontmatter: id (required), title, type, parent, storyPoints, assignee
 (accountId) optional. The body becomes the ticket description.
 
+Examples:
+  ushabti jira update --file ABC-123.md
+
 Options:
   --file <markdown>   Markdown file describing the update (required)
   --config <file>     Config file path
@@ -108,15 +129,15 @@ when it is truthy. Omit --where to print every ticket. These fields are in
 scope as variables: id, title, type, parent, assignee, storyPoints.
 
 Examples:
-  --where '!parent'                      tickets without a parent
-  --where 'assignee === "5b1f..."'       tickets assigned to an account
-  --where '!parent || !assignee'         no parent or unassigned
-  --where 'type === "Epic" && storyPoints > 3'
+  ushabti jira filter --project ABC --where '!parent'
+  ushabti jira filter --project ABC --where 'type === "Epic" && storyPoints > 3'
+  ushabti jira filter --project ABC --in ./tickets
 
 Options:
   --project <key>   Jira project key (required)
   --in <path>       JSON file or markdown directory (default: project-derived)
   --where <expr>    JavaScript filter expression (default: match all)
+  --config <file>   Config file path
   -h, --help        Show this help
 
 Note: --where is evaluated with new Function over local input; do not pass
