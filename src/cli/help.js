@@ -61,23 +61,26 @@ Options:
 
 Note: GitHub search returns at most 1000 results; narrow the window for very
 busy repositories.`,
-    "jira fetch": `Usage: ushabti jira fetch --project <key> [--format json|markdown] [--out <path>]
+    "jira fetch": `Usage: ushabti jira fetch --project <key> [--id <ticket-id>] [--format json|markdown] [--out <path>]
 
-Fetch all Jira tickets for a project.
+Fetch a project's Jira tickets, or a single ticket with --id.
 
 With --format markdown, writes one <ID>.md per ticket: YAML frontmatter
 (id, title, type, parent, storyPoints, assignee) plus the description body.
 
 Examples:
   ushabti jira fetch --project ABC
+  ushabti jira fetch --project ABC --id ABC-123
   ushabti jira fetch --project ABC --format markdown
-  ushabti jira fetch --project ABC --format markdown --out ./tickets
+  ushabti jira fetch --project ABC --id ABC-123 --format markdown
 
 Options:
   --project <key>          Jira project key (required)
+  --id <ticket-id>         Fetch only this ticket (e.g. ABC-123) instead of all
   --format json|markdown   Output format (default: json)
   --out <path>             Output file (json) or directory (markdown)
-                           Default: jira-<project>.ushabti.json or jira-<project>/
+                           Default (project): jira-<project>.ushabti.json or jira-<project>/
+                           Default (--id): jira-<id>.ushabti.json or <id>.md in cwd
   --config <file>          Config file path
   -h, --help               Show this help`,
     "jira create": `Usage: ushabti jira create --project <key> --file <markdown> [--update]

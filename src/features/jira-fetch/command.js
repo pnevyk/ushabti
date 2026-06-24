@@ -10,6 +10,7 @@ export async function run(argv) {
         args: argv,
         options: {
             project: { type: "string" },
+            id: { type: "string" },
             format: { type: "string" },
             out: { type: "string" },
             config: { type: "string" },
@@ -25,11 +26,14 @@ export async function run(argv) {
         throw new CliError(`Invalid --format: ${format} (expected ${FORMATS.join("|")})`);
     }
 
-    const out = values.out ?? defaultOut(values.project, format);
+    const out = values.out ?? defaultOut(values.project, format, values.id);
     const config = loadConfig(values.config);
-    await fetchTickets({ project: values.project, format, out, config });
+    await fetchTickets({ project: values.project, id: values.id, format, out, config });
 }
 
-function defaultOut(project, format) {
+function defaultOut(project, format, id) {
+    if (id) {
+        return format === "markdown" ? `${id}.md` : `jira-${id}.ushabti.json`;
+    }
     return format === "markdown" ? `jira-${project}` : `jira-${project}.ushabti.json`;
 }
