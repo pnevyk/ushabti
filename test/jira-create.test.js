@@ -18,26 +18,30 @@ test("toIssueFields builds required fields with ADF description", () => {
     assert.equal(fields.description.content[0].content[0].text, "Hello");
 });
 
-test("toIssueFields includes optional parent, assignee, story points", () => {
+test("toIssueFields includes optional parent, assignee, story points, sprint", () => {
     const fields = toIssueFields({
-        data: { title: "t", type: "Story", parent: "ABC-100", assignee: "acc-1", storyPoints: 3 },
+        data: { title: "t", type: "Story", parent: "ABC-100", assignee: "acc-1", storyPoints: 3, sprint: 15 },
         body: "",
         project: "ABC",
         spField: "customfield_10016",
+        sprintField: "customfield_10020",
     });
     assert.deepEqual(fields.parent, { key: "ABC-100" });
     assert.deepEqual(fields.assignee, { accountId: "acc-1" });
     assert.equal(fields.customfield_10016, 3);
+    assert.equal(fields.customfield_10020, 15);
 });
 
-test("toIssueFields omits story points when no field configured", () => {
+test("toIssueFields omits story points and sprint when no field configured", () => {
     const fields = toIssueFields({
-        data: { title: "t", type: "Story", storyPoints: 3 },
+        data: { title: "t", type: "Story", storyPoints: 3, sprint: 15 },
         body: "",
         project: "ABC",
         spField: null,
+        sprintField: null,
     });
     assert.equal("customfield_10016" in fields, false);
+    assert.equal("customfield_10020" in fields, false);
 });
 
 test("toIssueFields requires title and type", () => {

@@ -7,3 +7,5 @@ email = ""
 token = ""
 # Custom field id for story points, e.g. "customfield_10026". Optional.
 storyPointsField = ""
+# Custom field id for sprint, e.g. "customfield_10020". Optional.
+sprintField = ""

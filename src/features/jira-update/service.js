@@ -10,13 +10,14 @@ import { parse } from "../../shared/frontmatter.js";
 export async function updateTicket({ file, config }) {
     requireKeys(config, ["jira.baseUrl", "jira.email", "jira.token"]);
     const spField = config.jira.storyPointsField || null;
+    const sprintField = config.jira.sprintField || null;
 
     const content = await readFile(file, "utf8");
     const { data, body } = parse(content);
     if (!data.id) {
         throw new CliError("Frontmatter is missing required `id`");
     }
-    const fields = toUpdateFields({ data, body, spField });
+    const fields = toUpdateFields({ data, body, spField, sprintField });
 
     const client = createJiraClient(config);
     await client.issues.editIssue({ issueIdOrKey: String(data.id), fields });
@@ -27,7 +28,7 @@ export async function updateTicket({ file, config }) {
 
 // Pure: frontmatter + body -> Jira editIssue `fields` payload, only present
 // fields included. Exported for tests.
-export function toUpdateFields({ data, body, spField }) {
+export function toUpdateFields({ data, body, spField, sprintField }) {
     const fields = {};
     if (data.title != null) {
         fields.summary = data.title;
@@ -47,6 +48,9 @@ export function toUpdateFields({ data, body, spField }) {
     }
     if (spField && data.storyPoints != null) {
         fields[spField] = data.storyPoints;
+    }
+    if (sprintField && data.sprint != null) {
+        fields[sprintField] = data.sprint;
     }
     if (Object.keys(fields).length === 0) {
         throw new CliError("Frontmatter and body have no fields to update");

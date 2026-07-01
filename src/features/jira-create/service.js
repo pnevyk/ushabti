@@ -13,10 +13,11 @@ import { write } from "../../shared/output/file.js";
 export async function createTicket({ file, project, update, config }) {
     requireKeys(config, ["jira.baseUrl", "jira.email", "jira.token"]);
     const spField = config.jira.storyPointsField || null;
+    const sprintField = config.jira.sprintField || null;
 
     const content = await readFile(file, "utf8");
     const { data, body } = parse(content);
-    const fields = toIssueFields({ data, body, project, spField });
+    const fields = toIssueFields({ data, body, project, spField, sprintField });
 
     const client = createJiraClient(config);
     const created = await client.issues.createIssue({ fields });
@@ -45,7 +46,7 @@ export function applyCreatedId({ data, body, key }) {
 }
 
 // Pure: frontmatter + body -> Jira createIssue `fields` payload. Exported for tests.
-export function toIssueFields({ data, body, project, spField }) {
+export function toIssueFields({ data, body, project, spField, sprintField }) {
     if (!data.title) {
         throw new CliError("Frontmatter is missing required `title`");
     }
@@ -70,6 +71,9 @@ export function toIssueFields({ data, body, project, spField }) {
     }
     if (spField && data.storyPoints != null) {
         fields[spField] = data.storyPoints;
+    }
+    if (sprintField && data.sprint != null) {
+        fields[sprintField] = data.sprint;
     }
     return fields;
 }

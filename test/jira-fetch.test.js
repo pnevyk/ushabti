@@ -37,3 +37,32 @@ test("toTicket includes story points only when field configured", () => {
     assert.equal(toTicket(issue(fields), "customfield_10016").storyPoints, 5);
     assert.equal("storyPoints" in toTicket(issue(fields), null), false);
 });
+
+test("toTicket splits sprint into current and history", () => {
+    const fields = {
+        summary: "x",
+        customfield_10020: [{ id: 12, name: "S12" }, { id: 13, name: "S13" }, { id: 15, name: "S15" }],
+    };
+    const ticket = toTicket(issue(fields), null, "customfield_10020");
+    assert.equal(ticket.sprint, 15);
+    assert.deepEqual(ticket.sprintHistory, [12, 13]);
+});
+
+test("toTicket omits sprint history for a single sprint", () => {
+    const fields = { summary: "x", customfield_10020: [{ id: 15, name: "S15" }] };
+    const ticket = toTicket(issue(fields), null, "customfield_10020");
+    assert.equal(ticket.sprint, 15);
+    assert.equal(ticket.sprintHistory, null);
+});
+
+test("toTicket nulls sprint when field configured but absent", () => {
+    const ticket = toTicket(issue({ summary: "x" }), null, "customfield_10020");
+    assert.equal(ticket.sprint, null);
+    assert.equal(ticket.sprintHistory, null);
+});
+
+test("toTicket omits sprint when field not configured", () => {
+    const ticket = toTicket(issue({ summary: "x", customfield_10020: [{ id: 15 }] }), null, null);
+    assert.equal("sprint" in ticket, false);
+    assert.equal("sprintHistory" in ticket, false);
+});

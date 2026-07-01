@@ -11,15 +11,17 @@ import { write, ensureDir } from "../../shared/output/file.js";
 export async function fetchTickets({ project, id, format, out, config }) {
     requireKeys(config, ["jira.baseUrl", "jira.email", "jira.token"]);
     const spField = config.jira.storyPointsField || null;
+    const sprintField = config.jira.sprintField || null;
 
     const client = createJiraClient(config);
     const fields = ["summary", "description", "parent", "assignee", "issuetype"];
     if (spField) fields.push(spField);
+    if (sprintField) fields.push(sprintField);
 
     let tickets;
     if (id) {
         const issue = await client.issues.getIssue({ issueIdOrKey: id, fields });
-        tickets = [toTicket(issue, spField)];
+        tickets = [toTicket(issue, spField, sprintField)];
     } else {
         const issues = [];
         let nextPageToken;
@@ -33,7 +35,7 @@ export async function fetchTickets({ project, id, format, out, config }) {
             issues.push(...(result.issues ?? []));
             nextPageToken = result.nextPageToken ?? undefined;
         } while (nextPageToken);
-        tickets = issues.map((issue) => toTicket(issue, spField));
+        tickets = issues.map((issue) => toTicket(issue, spField, sprintField));
     }
 
     if (format === "markdown") {
@@ -53,7 +55,7 @@ export async function fetchTickets({ project, id, format, out, config }) {
 }
 
 // Pure: a Jira issue -> neutral ticket shape. Exported for unit testing.
-export function toTicket(issue, spField) {
+export function toTicket(issue, spField, sprintField) {
     const f = issue.fields ?? {};
     const ticket = {
         id: issue.key,
@@ -64,6 +66,13 @@ export function toTicket(issue, spField) {
     };
     if (spField) {
         ticket.storyPoints = f[spField] ?? null;
+    }
+    if (sprintField) {
+        const raw = Array.isArray(f[sprintField]) ? f[sprintField] : [];
+        // Cloud returns sprint objects {id, name, state, ...}; be defensive if it is already an id.
+        const ids = raw.map((s) => (s && typeof s === "object" ? s.id : s)).filter((v) => v != null);
+        ticket.sprint = ids.length ? ids[ids.length - 1] : null;
+        ticket.sprintHistory = ids.length > 1 ? ids.slice(0, -1) : null;
     }
     ticket.description = adfToMarkdown(f.description);
     return ticket;
