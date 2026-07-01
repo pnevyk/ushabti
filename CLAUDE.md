@@ -10,3 +10,7 @@ A simple NodeJS CLI tool for automating little tasks of a software engineer.
 - Use double quotes for strings.
 - Use 4-space indentation.
 
+## Guidance
+
+- Don't propose E2E tests on real resources, stick to unit tests
+
