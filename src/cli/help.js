@@ -7,6 +7,7 @@ Commands:
   pr comments    Fetch unresolved PR review threads to JSON
   pr digest      Fetch merged-PR history in a date window to JSON
   jira fetch     Fetch a project's tickets to JSON or markdown
+  jira project   Fetch a project's people and sprints to a YAML reference file
   jira create    Create a Jira ticket from a markdown file
   jira update    Update a Jira ticket from a markdown file
   jira filter    Filter locally fetched tickets by a JS expression
@@ -83,6 +84,23 @@ Options:
                            Default (--id): jira-<id>.ushabti.json or <id>.md in cwd
   --config <file>          Config file path
   -h, --help               Show this help`,
+    "jira project": `Usage: ushabti jira project --project <key> [--out <file>]
+
+Fetch a project's assignable people and its boards' sprints into a YAML file,
+mapping human-readable names to the ids used by the assignee and sprint fields.
+
+People list accountIds (for the assignee field). Boards each nest their sprints
+(all states) listing numeric sprint ids (for the sprint field).
+
+Examples:
+  ushabti jira project --project ABC
+  ushabti jira project --project ABC --out people.yaml
+
+Options:
+  --project <key>     Jira project key (required)
+  --out <file>        Output file (default: jira-<project>.ushabti.yaml)
+  --config <file>     Config file path
+  -h, --help          Show this help`,
     "jira create": `Usage: ushabti jira create --project <key> --file <markdown> [--update]
 
 Create a Jira ticket from a markdown file with YAML frontmatter.
