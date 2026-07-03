@@ -4,6 +4,11 @@ import MarkdownIt from "markdown-it";
 // markdown. Covered: paragraphs, headings, bold/italic/code/strikethrough/
 // links, bullet+ordered lists (nested), code blocks, blockquotes, horizontal
 // rules, hard breaks. Anything else degrades to its plain text.
+//
+// Smart cards (inline/block/embed links to Jira tickets or Confluence pages)
+// round-trip losslessly as markdown links carrying a sentinel title that
+// encodes the card type: "card" (inlineCard), "card-block" (blockCard),
+// "card-embed" (embedCard). Plain links have no title, so they stay links.
 
 // ---------------------------------------------------------------------------
 // ADF -> markdown
@@ -44,9 +49,26 @@ function renderBlock(node) {
             return renderList(node, "ordered");
         case "table":
             return renderTable(node);
+        case "blockCard":
+            return cardLink(node, "card-block");
+        case "embedCard":
+            return cardLink(node, "card-embed");
         default:
             return renderInline(node.content ?? []);
     }
+}
+
+// A smart card carries only a URL (in attrs.url, or nested under attrs.data).
+function cardUrl(node) {
+    return node.attrs?.url ?? node.attrs?.data?.url ?? null;
+}
+
+// Render a card as a markdown link whose title sentinel encodes the card type
+// so markdownToAdf can reconstruct it. No URL means we can't represent it, so
+// it degrades to an empty string (dropped by renderBlocks).
+function cardLink(node, kind) {
+    const url = cardUrl(node);
+    return url ? `[${url}](${url} "${kind}")` : "";
 }
 
 function renderList(node, kind) {
@@ -91,6 +113,9 @@ function renderText(node) {
     if (node.type === "hardBreak") {
         return "\\\n";
     }
+    if (node.type === "inlineCard") {
+        return cardLink(node, "card");
+    }
     if (node.type !== "text") {
         return renderInline(node.content);
     }
@@ -130,6 +155,9 @@ function indentContinuation(text, width) {
 // ---------------------------------------------------------------------------
 
 const md = new MarkdownIt();
+
+// Link title sentinel -> smart card node type. See the header comment.
+const CARD_TITLES = { card: "inlineCard", "card-block": "blockCard", "card-embed": "embedCard" };
 
 export function markdownToAdf(source) {
     const tokens = md.parse(source ?? "", {});
@@ -214,7 +242,30 @@ export function markdownToAdf(source) {
         }
     }
 
+    hoistBlockCards(doc.content);
     return { version: 1, type: "doc", content: doc.content };
+}
+
+// Block/embed cards arrive wrapped in a paragraph (markdown-it parses their
+// link inline). ADF places them at block level, so lift a paragraph whose sole
+// child is a block/embed card up to where the paragraph sat. Inline cards are
+// genuinely inline and stay inside their paragraph.
+function hoistBlockCards(nodes) {
+    for (const node of nodes) {
+        if (Array.isArray(node.content)) {
+            hoistBlockCards(node.content);
+        }
+    }
+    for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+        if (
+            node.type === "paragraph" &&
+            node.content?.length === 1 &&
+            (node.content[0].type === "blockCard" || node.content[0].type === "embedCard")
+        ) {
+            nodes[i] = node.content[0];
+        }
+    }
 }
 
 function push(stack, node) {
@@ -225,6 +276,9 @@ function push(stack, node) {
 function renderInlineTokens(children) {
     const marks = [];
     const out = [];
+    // When set, we're inside a smart-card link: emit the card node on close and
+    // swallow its display text.
+    let card = null;
     const text = (content, extra) => {
         const all = extra ? [...marks, extra] : marks;
         const node = { type: "text", text: content };
@@ -235,6 +289,7 @@ function renderInlineTokens(children) {
     for (const token of children ?? []) {
         switch (token.type) {
             case "text":
+                if (card) break;
                 if (token.content) text(token.content);
                 break;
             case "code_inline":
@@ -249,9 +304,15 @@ function renderInlineTokens(children) {
             case "s_open":
                 marks.push({ type: "strike" });
                 break;
-            case "link_open":
-                marks.push({ type: "link", attrs: { href: token.attrGet("href") ?? "" } });
+            case "link_open": {
+                const type = CARD_TITLES[token.attrGet("title")];
+                if (type) {
+                    card = { type, url: token.attrGet("href") ?? "" };
+                } else {
+                    marks.push({ type: "link", attrs: { href: token.attrGet("href") ?? "" } });
+                }
                 break;
+            }
             case "strong_close":
                 popMark(marks, "strong");
                 break;
@@ -262,7 +323,12 @@ function renderInlineTokens(children) {
                 popMark(marks, "strike");
                 break;
             case "link_close":
-                popMark(marks, "link");
+                if (card) {
+                    out.push({ type: card.type, attrs: { url: card.url } });
+                    card = null;
+                } else {
+                    popMark(marks, "link");
+                }
                 break;
             case "hardbreak":
                 out.push({ type: "hardBreak" });
