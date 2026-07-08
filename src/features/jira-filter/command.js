@@ -13,8 +13,8 @@ export async function run(argv) {
         },
     });
 
-    if (!values.project) {
-        throw new CliError("Missing required --project <key>");
+    if (!values.project && !values.in) {
+        throw new CliError("Missing required --project <key> or --in <path>");
     }
 
     const inPath = values.in ?? defaultIn(values.project);

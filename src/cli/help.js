@@ -63,9 +63,12 @@ Options:
 
 Note: GitHub search returns at most 1000 results; narrow the window for very
 busy repositories.`,
-    "jira fetch": `Usage: ushabti jira fetch --project <key> [--id <ticket-id>] [--format json|markdown] [--out <path>]
+    "jira fetch": `Usage: ushabti jira fetch (--project <key> | --id <ticket-id>) [--format json|markdown] [--out <path>]
 
 Fetch a project's Jira tickets, or a single ticket with --id.
+
+With --id, the ticket key already implies its project, so --project is not
+required (and is ignored).
 
 With --format markdown, writes one <ID>.md per ticket: YAML frontmatter
 (id, title, type, parent, storyPoints, assignee) plus the description body.
@@ -77,7 +80,7 @@ Examples:
   ushabti jira fetch --project ABC --id ABC-123 --format markdown
 
 Options:
-  --project <key>          Jira project key (required)
+  --project <key>          Jira project key (required unless --id is given)
   --id <ticket-id>         Fetch only this ticket (e.g. ABC-123) instead of all
   --format json|markdown   Output format (default: json)
   --out <path>             Output file (json) or directory (markdown)
@@ -158,13 +161,13 @@ Options:
   --file <markdown>   Markdown file describing the update (required)
   --config <file>     Config file path
   -h, --help          Show this help`,
-    "jira filter": `Usage: ushabti jira filter --project <key> [--in <path>] [--where <expr>]
+    "jira filter": `Usage: ushabti jira filter (--project <key> | --in <path>) [--where <expr>]
 
 Filter locally fetched tickets and print matching ticket ids, one per line.
 
 Reads tickets from --in (a JSON file or a markdown directory, detected
-automatically). Without --in, defaults to jira-<project>.ushabti.json, then
-jira-<project>/.
+automatically). Without --in, --project is required to derive the default
+input: jira-<project>.ushabti.json, then jira-<project>/.
 
 --where is a JavaScript expression evaluated per ticket; the ticket passes
 when it is truthy. Omit --where to print every ticket. These fields are in
@@ -176,7 +179,7 @@ Examples:
   ushabti jira filter --project ABC --in ./tickets
 
 Options:
-  --project <key>   Jira project key (required)
+  --project <key>   Jira project key (required unless --in is given)
   --in <path>       JSON file or markdown directory (default: project-derived)
   --where <expr>    JavaScript filter expression (default: match all)
   --config <file>   Config file path

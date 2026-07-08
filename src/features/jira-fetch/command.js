@@ -17,8 +17,8 @@ export async function run(argv) {
         },
     });
 
-    if (!values.project) {
-        throw new CliError("Missing required --project <key>");
+    if (!values.id && !values.project) {
+        throw new CliError("Missing required --project <key> (or pass --id <ticket-id>)");
     }
 
     const format = values.format ?? "json";
