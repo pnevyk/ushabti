@@ -3,6 +3,7 @@ import { CliError } from "../shared/errors.js";
 import * as prComments from "../features/pr-comments/command.js";
 import * as prDigest from "../features/pr-digest/command.js";
 import * as jiraFetch from "../features/jira-fetch/command.js";
+import * as jiraComments from "../features/jira-comments/command.js";
 import * as jiraProject from "../features/jira-project/command.js";
 import * as jiraCreate from "../features/jira-create/command.js";
 import * as jiraUpdate from "../features/jira-update/command.js";
@@ -13,6 +14,7 @@ const commands = {
     "pr comments": prComments,
     "pr digest": prDigest,
     "jira fetch": jiraFetch,
+    "jira comments": jiraComments,
     "jira project": jiraProject,
     "jira create": jiraCreate,
     "jira update": jiraUpdate,

@@ -7,6 +7,7 @@ Commands:
   pr comments    Fetch unresolved PR review threads to JSON
   pr digest      Fetch merged-PR history in a date window to JSON
   jira fetch     Fetch a project's tickets to JSON or markdown
+  jira comments  Fetch a ticket's comments to JSON or markdown
   jira project   Fetch a project's people and sprints to a YAML reference file
   jira create    Create a Jira ticket from a markdown file
   jira update    Update a Jira ticket from a markdown file
@@ -82,6 +83,26 @@ Options:
   --out <path>             Output file (json) or directory (markdown)
                            Default (project): jira-<project>.ushabti.json or jira-<project>/
                            Default (--id): jira-<id>.ushabti.json or <id>.md in cwd
+  --config <file>          Config file path
+  -h, --help               Show this help`,
+    "jira comments": `Usage: ushabti jira comments --id <ticket-key> [--format json|markdown] [--out <path>]
+
+Fetch all comments of a single Jira ticket.
+
+Each comment carries id, author (display name), authorId (accountId), created,
+updated and body (rendered from ADF to markdown). With --format markdown, writes
+one file with a section per comment.
+
+Examples:
+  ushabti jira comments --id ABC-123
+  ushabti jira comments --id ABC-123 --format markdown
+  ushabti jira comments --id ABC-123 --out thread.json
+
+Options:
+  --id <ticket-key>        Ticket to fetch comments for, e.g. ABC-123 (required)
+  --format json|markdown   Output format (default: json)
+  --out <path>             Output file
+                           Default: jira-<id>-comments.ushabti.json or <id>-comments.md
   --config <file>          Config file path
   -h, --help               Show this help`,
     "jira project": `Usage: ushabti jira project --project <key> [--out <file>]
