@@ -186,3 +186,55 @@ test("round-trip: smart cards survive adf conversion losslessly", () => {
     const back = markdownToAdf(adfToMarkdown(adf));
     assert.deepEqual(back.content, adf.content);
 });
+
+test("adfToMarkdown: panel renders as a GFM alert blockquote", () => {
+    const adf = doc({
+        type: "panel",
+        attrs: { panelType: "warning" },
+        content: [{ type: "paragraph", content: [text("body text")] }],
+    });
+    assert.equal(adfToMarkdown(adf), "> [!WARNING]\n> body text");
+});
+
+test("adfToMarkdown: unmapped panelType falls back to plain blockquote", () => {
+    const adf = doc({
+        type: "panel",
+        attrs: { panelType: "success" },
+        content: [{ type: "paragraph", content: [text("body text")] }],
+    });
+    assert.equal(adfToMarkdown(adf), "> body text");
+});
+
+test("markdownToAdf: GFM alert becomes a panel node", () => {
+    const adf = markdownToAdf("> [!WARNING]\n> body text");
+    assert.deepEqual(adf.content[0], {
+        type: "panel",
+        attrs: { panelType: "warning" },
+        content: [{ type: "paragraph", content: [text("body text")] }],
+    });
+});
+
+test("markdownToAdf: plain blockquote stays a blockquote", () => {
+    const adf = markdownToAdf("> just a quote");
+    assert.deepEqual(adf.content[0], {
+        type: "blockquote",
+        content: [{ type: "paragraph", content: [text("just a quote")] }],
+    });
+});
+
+test("markdownToAdf: panel with multi-paragraph body", () => {
+    const adf = markdownToAdf("> [!NOTE]\n> first\n>\n> second");
+    assert.deepEqual(adf.content[0], {
+        type: "panel",
+        attrs: { panelType: "note" },
+        content: [
+            { type: "paragraph", content: [text("first")] },
+            { type: "paragraph", content: [text("second")] },
+        ],
+    });
+});
+
+test("round-trip: GFM alert survives adf conversion", () => {
+    assert.equal(adfToMarkdown(markdownToAdf("> [!WARNING]\n> body text")), "> [!WARNING]\n> body text");
+    assert.equal(adfToMarkdown(markdownToAdf("> [!TIP]\n> body text")), "> [!TIP]\n> body text");
+});

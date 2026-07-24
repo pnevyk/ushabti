@@ -9,6 +9,13 @@ import MarkdownIt from "markdown-it";
 // round-trip losslessly as markdown links carrying a sentinel title that
 // encodes the card type: "card" (inlineCard), "card-block" (blockCard),
 // "card-embed" (embedCard). Plain links have no title, so they stay links.
+//
+// Panels (callout boxes) round-trip through GitHub-flavored markdown alert
+// syntax, a blockquote whose first line is a "[!TYPE]" marker: NOTE, TIP,
+// IMPORTANT, WARNING, CAUTION map to the ADF panelTypes note, tip, info,
+// warning, error respectively. ADF panelTypes with no GFM equivalent
+// ("success", "custom", ...) degrade to a plain blockquote (marker dropped);
+// markdown has no way to author those.
 
 // ---------------------------------------------------------------------------
 // ADF -> markdown
@@ -43,6 +50,12 @@ function renderBlock(node) {
             return "---";
         case "blockquote":
             return prefixLines(renderBlocks(node.content ?? []), "> ");
+        case "panel": {
+            const alertType = PANEL_TO_ALERT[node.attrs?.panelType];
+            const body = renderBlocks(node.content ?? []);
+            const text = alertType ? [`[!${alertType}]`, body].filter(Boolean).join("\n") : body;
+            return prefixLines(text, "> ");
+        }
         case "bulletList":
             return renderList(node, "bullet");
         case "orderedList":
@@ -159,6 +172,10 @@ const md = new MarkdownIt();
 // Link title sentinel -> smart card node type. See the header comment.
 const CARD_TITLES = { card: "inlineCard", "card-block": "blockCard", "card-embed": "embedCard" };
 
+// GFM alert kind -> ADF panelType, and its inverse. See the header comment.
+const ALERT_TO_PANEL = { NOTE: "note", TIP: "tip", IMPORTANT: "info", WARNING: "warning", CAUTION: "error" };
+const PANEL_TO_ALERT = Object.fromEntries(Object.entries(ALERT_TO_PANEL).map(([k, v]) => [v, k]));
+
 export function markdownToAdf(source) {
     const tokens = md.parse(source ?? "", {});
     const doc = { type: "doc", content: [] };
@@ -234,9 +251,33 @@ export function markdownToAdf(source) {
             case "hr":
                 top().content.push({ type: "rule" });
                 break;
-            case "inline":
-                top().content.push(...renderInlineTokens(token.children));
+            case "inline": {
+                const nodes = renderInlineTokens(token.children);
+                const parent = stack[stack.length - 2];
+                const isPanelCandidate =
+                    top().type === "paragraph" &&
+                    parent?.type === "blockquote" &&
+                    parent.content.length === 1 &&
+                    parent.content[0] === top();
+                const marker =
+                    isPanelCandidate && nodes[0]?.type === "text" && !nodes[0].marks
+                        ? nodes[0].text.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]$/i)
+                        : null;
+                if (marker) {
+                    parent.type = "panel";
+                    parent.attrs = { panelType: ALERT_TO_PANEL[marker[1].toUpperCase()] };
+                    const rest = nodes.slice(1);
+                    if (rest[0]?.type === "text" && !rest[0].marks && rest[0].text === " ") rest.shift();
+                    if (rest.length === 0) {
+                        parent.content.pop(); // drop the now-empty marker-only paragraph
+                    } else {
+                        top().content.push(...rest);
+                    }
+                    break;
+                }
+                top().content.push(...nodes);
                 break;
+            }
             default:
                 break;
         }
