@@ -6,6 +6,7 @@ import { adfToMarkdown } from "../../shared/adf.js";
 import { serialize } from "../../shared/output/json.js";
 import { stringify } from "../../shared/frontmatter.js";
 import { write, ensureDir } from "../../shared/output/file.js";
+import { nodeBasename, nodeFilename } from "../../shared/confluence-naming.js";
 
 // Orchestrates: fetch a single Confluence page (as Atlas Document Format),
 // map it to a neutral shape, then emit either a JSON file or a markdown file
@@ -17,7 +18,8 @@ export async function downloadPage({ id, format, out, config }) {
     const page = await client.page.getPageById({ id: Number(id), bodyFormat: "atlas_doc_format" });
     const mapped = toPage(page);
 
-    await write(out, formatNode(mapped, format));
+    const ext = format === "markdown" ? "md" : "ushabti.json";
+    await write(out ?? nodeFilename(mapped, ext), formatNode(mapped, format));
 }
 
 // Orchestrates: resolve whether --id is a page or a folder, fetch its entire
@@ -202,30 +204,4 @@ export function pruneTree(rootId, childrenByParent) {
 
     walk(rootId);
     return { keptChildrenByParent, skipped };
-}
-
-// Pure: filesystem-safe slug from a Confluence title. Strips characters
-// illegal in file/directory names, collapses whitespace and repeated
-// separators, and caps length. All-illegal or blank input yields "".
-// Exported for unit testing.
-export function sanitizeTitle(title) {
-    const slug = (title ?? "")
-        .replace(/[\\/:*?"<>|\x00-\x1f]/g, "-")
-        .trim()
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-    return slug.slice(0, 80).replace(/-$/, "");
-}
-
-// Pure: <sanitized-title>-<id>, or bare <id> when the title sanitizes to
-// nothing. Exported for unit testing.
-export function nodeBasename({ id, title }) {
-    const slug = sanitizeTitle(title);
-    return slug ? `${slug}-${id}` : `${id}`;
-}
-
-// Pure: nodeBasename with an extension. Exported for unit testing.
-export function nodeFilename(node, ext) {
-    return `${nodeBasename(node)}.${ext}`;
 }

@@ -199,7 +199,8 @@ to markdown) to a local file.
 
 Default format is markdown: YAML frontmatter (id, title, type, spaceId,
 parentId) plus the page body as markdown. type is "page" or "live" (a live
-doc). Pass --format json for a single JSON object instead.
+doc). Pass --format json for a single JSON object instead. The output
+filename always includes the page's title: <title>-<id>.md (or .ushabti.json).
 
 With --children, --id may be a page or a folder: downloads it plus every
 descendant at any depth into a directory tree, one file per node
@@ -218,7 +219,7 @@ Options:
   --id <pageId>            Confluence page or folder id (required)
   --format json|markdown   Output format (default: markdown)
   --out <path>             Output file, or output directory with --children
-                           Default: <id>.md or confluence-<id>.ushabti.json
+                           Default: <title>-<id>.md or <title>-<id>.ushabti.json
                            Default with --children: confluence-<id>/
   --children               Also download every descendant, as a directory tree
   --config <file>          Config file path

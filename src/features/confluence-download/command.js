@@ -31,11 +31,6 @@ export async function run(argv) {
         const out = values.out ?? `confluence-${values.id}`;
         await downloadTree({ id: values.id, format, out, config });
     } else {
-        const out = values.out ?? defaultOut(values.id, format);
-        await downloadPage({ id: values.id, format, out, config });
+        await downloadPage({ id: values.id, format, out: values.out, config });
     }
-}
-
-function defaultOut(id, format) {
-    return format === "markdown" ? `${id}.md` : `confluence-${id}.ushabti.json`;
 }
