@@ -14,3 +14,7 @@ test("help runs without error", async () => {
 test("subcommand help runs without dispatching the command", async () => {
     await run(["pr", "comments", "--help"]);
 });
+
+test("confluence download subcommand is wired up", async () => {
+    await run(["confluence", "download", "--help"]);
+});

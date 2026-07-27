@@ -18,6 +18,7 @@
   "license": "MIT",
   "packageManager": "pnpm@10.6.5",
   "dependencies": {
+    "confluence.js": "^3.0.3",
     "jira.js": "^5.3.1",
     "markdown-it": "^14.2.0",
     "octokit": "^5.0.5",

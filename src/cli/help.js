@@ -4,14 +4,15 @@ export function printHelp() {
 Usage: ushabti <group> <command> [options]
 
 Commands:
-  pr comments    Fetch unresolved PR review threads to JSON
-  pr digest      Fetch merged-PR history in a date window to JSON
-  jira fetch     Fetch a project's tickets to JSON or markdown
-  jira comments  Fetch a ticket's comments to JSON or markdown
-  jira project   Fetch a project's people and sprints to a YAML reference file
-  jira create    Create a Jira ticket from a markdown file
-  jira update    Update a Jira ticket from a markdown file
-  jira filter    Filter locally fetched tickets by a JS expression
+  pr comments            Fetch unresolved PR review threads to JSON
+  pr digest              Fetch merged-PR history in a date window to JSON
+  jira fetch             Fetch a project's tickets to JSON or markdown
+  jira comments          Fetch a ticket's comments to JSON or markdown
+  jira project           Fetch a project's people and sprints to a YAML reference file
+  jira create            Create a Jira ticket from a markdown file
+  jira update            Update a Jira ticket from a markdown file
+  jira filter            Filter locally fetched tickets by a JS expression
+  confluence download    Fetch a Confluence page to JSON or markdown
 
 Run \`ushabti <group> <command> --help\` for options and examples.
 
@@ -187,6 +188,25 @@ Options:
 
 Note: --where is evaluated with new Function over local input; do not pass
 untrusted expressions.`,
+    "confluence download": `Usage: ushabti confluence download --id <pageId> [--format json|markdown] [--out <path>]
+
+Fetch a single Confluence page's content (as Atlas Document Format, converted
+to markdown) to a local file.
+
+With --format markdown, writes YAML frontmatter (id, title, spaceId, parentId)
+plus the page body as markdown.
+
+Examples:
+  ushabti confluence download --id 12345
+  ushabti confluence download --id 12345 --format markdown
+
+Options:
+  --id <pageId>            Confluence page id (required)
+  --format json|markdown   Output format (default: json)
+  --out <path>             Output file
+                           Default: confluence-<id>.ushabti.json or <id>.md
+  --config <file>          Config file path
+  -h, --help               Show this help`,
 };
 
 export function printCommandHelp(key) {
