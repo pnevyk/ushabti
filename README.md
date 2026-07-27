@@ -9,6 +9,7 @@ Install:
 ```sh
 git clone git@github.com:pnevyk/ushabti.git
 cd ushabti
+pnpm install
 npm install -g .
 ```
 
