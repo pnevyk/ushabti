@@ -131,8 +131,20 @@ export function toPage(page) {
         type: page.subtype ?? "page",
         spaceId: page.spaceId ?? null,
         parentId: page.parentId ?? null,
-        description: adfToMarkdown(adf),
+        description: toDescription(adf),
     };
+}
+
+// A page whose entire body is a single markdown-language code block was
+// authored as raw markdown directly -- unwrap it verbatim instead of running
+// it through adfToMarkdown, which would re-fence the whole file as a code
+// block instead of reproducing its actual content.
+function toDescription(adf) {
+    const content = adf?.content ?? [];
+    if (content.length === 1 && content[0].type === "codeBlock" && content[0].attrs?.language === "markdown") {
+        return (content[0].content ?? []).map((n) => n.text ?? "").join("");
+    }
+    return adfToMarkdown(adf);
 }
 
 // Pure: a Confluence Folder -> neutral shape. Folders carry no body/content

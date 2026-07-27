@@ -48,6 +48,29 @@ test("toPage defaults type to \"page\" and passes through subtype \"live\"", () 
     assert.equal(toPage(page({ subtype: "live" })).type, "live");
 });
 
+test("toPage unwraps a whole-file markdown code block instead of re-fencing it", () => {
+    const rawMarkdownAdf = JSON.stringify({
+        version: 1,
+        type: "doc",
+        content: [{ type: "codeBlock", attrs: { language: "markdown" }, content: [{ type: "text", text: "# Title\n\nBody." }] }],
+    });
+    const mapped = toPage(page({ body: { atlas_doc_format: { representation: "atlas_doc_format", value: rawMarkdownAdf } } }));
+    assert.equal(mapped.description, "# Title\n\nBody.");
+});
+
+test("toPage still fences an embedded markdown code sample among other content", () => {
+    const mixedAdf = JSON.stringify({
+        version: 1,
+        type: "doc",
+        content: [
+            { type: "paragraph", content: [{ type: "text", text: "See example:" }] },
+            { type: "codeBlock", attrs: { language: "markdown" }, content: [{ type: "text", text: "# Sample" }] },
+        ],
+    });
+    const mapped = toPage(page({ body: { atlas_doc_format: { representation: "atlas_doc_format", value: mixedAdf } } }));
+    assert.equal(mapped.description, "See example:\n\n```markdown\n# Sample\n```");
+});
+
 test("toFolder maps standard fields (no body/content)", () => {
     const mapped = toFolder({ id: "555", title: "Onboarding", parentId: "111" });
     assert.deepEqual(mapped, { id: "555", title: "Onboarding", type: "folder", parentId: "111" });
