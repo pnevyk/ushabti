@@ -453,3 +453,43 @@ test("round-trip: decisionList survives adf conversion", () => {
     });
     assert.deepEqual(markdownToAdf(adfToMarkdown(adf)).content, adf.content);
 });
+
+test("adfToMarkdown: expand renders as a details/summary collapsible section", () => {
+    const adf = doc({
+        type: "expand",
+        attrs: { title: "Details" },
+        content: [{ type: "paragraph", content: [text("Hidden body")] }],
+    });
+    assert.equal(adfToMarkdown(adf), "<details>\n\n<summary>Details</summary>\n\nHidden body\n\n</details>");
+});
+
+test("adfToMarkdown: nestedExpand renders the same as expand", () => {
+    const adf = doc({
+        type: "nestedExpand",
+        attrs: { title: "Details" },
+        content: [{ type: "paragraph", content: [text("Hidden body")] }],
+    });
+    assert.equal(adfToMarkdown(adf), "<details>\n\n<summary>Details</summary>\n\nHidden body\n\n</details>");
+});
+
+test("markdownToAdf: details/summary sentinels become an expand node", () => {
+    const adf = markdownToAdf("<details>\n\n<summary>Details</summary>\n\nHidden body\n\n</details>");
+    assert.deepEqual(adf.content[0], {
+        type: "expand",
+        attrs: { title: "Details" },
+        content: [{ type: "paragraph", content: [text("Hidden body")] }],
+    });
+});
+
+test("round-trip: expand survives adf conversion alongside surrounding content", () => {
+    const adf = doc(
+        { type: "paragraph", content: [text("Before.")] },
+        {
+            type: "expand",
+            attrs: { title: "Details" },
+            content: [{ type: "paragraph", content: [text("Hidden body.")] }],
+        },
+        { type: "paragraph", content: [text("After.")] },
+    );
+    assert.deepEqual(markdownToAdf(adfToMarkdown(adf)).content, adf.content);
+});

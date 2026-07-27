@@ -41,6 +41,14 @@ import MarkdownIt from "markdown-it";
 //   tasks; a `- [decision] ...` marker (no native GFM equivalent) for
 //   decisions. Detected after parsing a plain bullet list, same trick as
 //   panel detection: if every item carries the marker, the list is retyped.
+// - Expandable sections (`expand`/`nestedExpand`, the "Expand" macro): GitHub's
+//   collapsible-section HTML, `<details>` / `<summary>title</summary>` /
+//   `</details>` sentinel lines wrapping ordinary nested markdown -- renders
+//   as a real collapsible section on GitHub, not just inert text. Both node
+//   types round-trip as plain `expand`; `nestedExpand` (required inside table
+//   cells) is indistinguishable once GFM's cell-flattening already discards
+//   block structure there, same limitation as any other block content in a
+//   cell.
 
 // ---------------------------------------------------------------------------
 // ADF -> markdown
@@ -104,6 +112,9 @@ function renderBlock(node) {
             return macroBlock(node);
         case "mediaSingle":
             return mediaLink(node);
+        case "expand":
+        case "nestedExpand":
+            return renderExpand(node);
         default:
             return renderInline(node.content ?? []);
     }
@@ -160,6 +171,15 @@ function mediaLink(node) {
     }
     const alt = media.attrs?.alt ?? "";
     return `![${alt}](attachment:${id})`;
+}
+
+// expand/nestedExpand render identically as a GitHub collapsible section;
+// nestedExpand's table-cell-only placement isn't distinguishable on the way
+// back in (see the header comment).
+function renderExpand(node) {
+    const title = node.attrs?.title ?? "";
+    const body = renderBlocks(node.content ?? []);
+    return ["<details>", `<summary>${title}</summary>`, body, "</details>"].join("\n\n");
 }
 
 function renderList(node, kind) {
@@ -426,6 +446,26 @@ export function markdownToAdf(source) {
 // stack surgery instead of emitting it as a normal paragraph. Returns true
 // when the paragraph was consumed as a sentinel.
 function handleSentinelParagraph(text, stack) {
+    if (text === "<details>") {
+        discardParagraph(stack);
+        push(stack, { type: "expand", attrs: { title: "" }, content: [] });
+        stack.push({ type: "sentinel" });
+        return true;
+    }
+    const summaryMatch = text.match(/^<summary>(.*)<\/summary>$/);
+    if (summaryMatch && stack[stack.length - 2]?.type === "expand") {
+        const expand = stack[stack.length - 2];
+        discardParagraph(stack);
+        expand.attrs.title = summaryMatch[1];
+        stack.push({ type: "sentinel" });
+        return true;
+    }
+    if (text === "</details>") {
+        discardParagraph(stack);
+        stack.pop(); // close expand
+        stack.push({ type: "sentinel" });
+        return true;
+    }
     if (text === "<!-- layout -->") {
         discardParagraph(stack);
         push(stack, { type: "layoutSection", content: [] });
