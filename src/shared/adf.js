@@ -16,6 +16,31 @@ import MarkdownIt from "markdown-it";
 // warning, error respectively. ADF panelTypes with no GFM equivalent
 // ("success", "custom", ...) degrade to a plain blockquote (marker dropped);
 // markdown has no way to author those.
+//
+// Confluence-specific nodes (real pages use these far more than Jira
+// descriptions do) round-trip as follows:
+// - Multi-column layouts: `<!-- layout -->` / `<!-- layout-column -->` /
+//   `<!-- /layout -->` sentinel lines wrap each column's blocks. Column width
+//   ratios aren't representable in markdown and come back evenly split.
+// - Macros without an editable body (`extension`/`inlineExtension`, e.g. a
+//   table of contents): a fenced code block tagged `confluence-macro` (block)
+//   or an inline code span `` `[confluence-macro:{...}]` `` (inline), holding
+//   the macro's JSON descriptor verbatim. Opaque passthrough, not meant to be
+//   hand-authored.
+// - Macros with an editable body (`bodiedExtension`, e.g. "expand"): the same
+//   `<!-- confluence-macro {...} --> ... <!-- /confluence-macro -->` sentinel
+//   pair as layouts, wrapping ordinary nested markdown.
+// - Media (`mediaSingle`/`media`): `![alt](attachment:<mediaId>)`, a custom
+//   `attachment:` URL scheme carrying the existing Confluence media id. Only
+//   round-trips a reference to media that already exists; there is no upload
+//   path to attach new local images.
+// - Mentions: reuse the smart-card link mechanism, `[Display Name](accountId
+//   "mention")`.
+// - Status lozenges: `` `[status:Label|color]` ``. Dates: `` `[date:YYYY-MM-DD]` ``.
+// - Task lists / decision lists: native GFM checkboxes (`- [ ]`/`- [x]`) for
+//   tasks; a `- [decision] ...` marker (no native GFM equivalent) for
+//   decisions. Detected after parsing a plain bullet list, same trick as
+//   panel detection: if every item carries the marker, the list is retyped.
 
 // ---------------------------------------------------------------------------
 // ADF -> markdown
@@ -60,12 +85,25 @@ function renderBlock(node) {
             return renderList(node, "bullet");
         case "orderedList":
             return renderList(node, "ordered");
+        case "taskList":
+            return renderList(node, "task");
+        case "decisionList":
+            return renderList(node, "decision");
         case "table":
             return renderTable(node);
         case "blockCard":
             return cardLink(node, "card-block");
         case "embedCard":
             return cardLink(node, "card-embed");
+        case "layoutSection":
+            return renderLayoutSection(node);
+        case "extension":
+        case "inlineExtension":
+            return macroFence(node);
+        case "bodiedExtension":
+            return macroBlock(node);
+        case "mediaSingle":
+            return mediaLink(node);
         default:
             return renderInline(node.content ?? []);
     }
@@ -84,16 +122,72 @@ function cardLink(node, kind) {
     return url ? `[${url}](${url} "${kind}")` : "";
 }
 
+// A layoutSection's columns have no markdown equivalent, so each column's
+// blocks are wrapped in HTML-comment sentinels. Column width ratios (attrs on
+// layoutColumn) aren't representable and are lost -- markdownToAdf splits
+// width evenly across however many columns come back.
+function renderLayoutSection(node) {
+    const columns = (node.content ?? []).map((col) => renderBlocks(col.content ?? []));
+    return ["<!-- layout -->", columns.join("\n\n<!-- layout-column -->\n\n"), "<!-- /layout -->"].join("\n\n");
+}
+
+// extension/inlineExtension carry no editable body, just a macro descriptor
+// (extensionKey, extensionType, parameters, ...). Passed through verbatim as
+// JSON in a fenced code block (block extensions) or inline code span (inline
+// extensions) -- not meant to be hand-edited, just preserved on round-trip.
+function macroFence(node) {
+    const json = JSON.stringify(node.attrs ?? {});
+    return node.type === "inlineExtension" ? `\`[confluence-macro:${json}]\`` : `\`\`\`confluence-macro\n${json}\n\`\`\``;
+}
+
+// bodiedExtension has an editable body, so the body renders as ordinary
+// nested markdown between two sentinel comments; only the macro descriptor
+// itself is opaque.
+function macroBlock(node) {
+    const json = JSON.stringify(node.attrs ?? {});
+    const body = renderBlocks(node.content ?? []);
+    return [`<!-- confluence-macro ${json} -->`, body, "<!-- /confluence-macro -->"].join("\n\n");
+}
+
+// mediaSingle wraps a single media node; only an existing Confluence media id
+// can be represented (attachment: URL scheme), there is no way to attach a
+// brand-new local file through markdown.
+function mediaLink(node) {
+    const media = (node.content ?? []).find((n) => n.type === "media");
+    const id = media?.attrs?.id;
+    if (!id) {
+        return "";
+    }
+    const alt = media.attrs?.alt ?? "";
+    return `![${alt}](attachment:${id})`;
+}
+
 function renderList(node, kind) {
+    // taskItem/decisionItem hold inline content directly (no paragraph
+    // wrapper), unlike listItem which holds blocks.
+    const isFlat = kind === "task" || kind === "decision";
     return (node.content ?? [])
         .map((item, i) => {
-            const marker = kind === "ordered" ? `${i + 1}. ` : "- ";
-            // Join an item's blocks tightly so a paragraph and its sub-list
-            // stay on adjacent lines rather than separated by a blank line.
-            const inner = (item.content ?? []).map(renderBlock).join("\n");
+            const marker = listMarker(kind, item, i);
+            const inner = isFlat
+                ? renderInline(item.content)
+                : // Join an item's blocks tightly so a paragraph and its sub-list
+                  // stay on adjacent lines rather than separated by a blank line.
+                  (item.content ?? []).map(renderBlock).join("\n");
             return marker + indentContinuation(inner, marker.length);
         })
         .join("\n");
+}
+
+function listMarker(kind, item) {
+    switch (kind) {
+        case "task":
+            return item.attrs?.state === "DONE" ? "- [x] " : "- [ ] ";
+        case "decision":
+            return "- [decision] ";
+        default:
+            return "- ";
+    }
 }
 
 // Render an ADF table as a GFM pipe table. The first row is treated as the
@@ -129,6 +223,19 @@ function renderText(node) {
     if (node.type === "inlineCard") {
         return cardLink(node, "card");
     }
+    if (node.type === "mention") {
+        const text = node.attrs?.text || node.attrs?.id || "";
+        return `[${text}](${node.attrs?.id ?? ""} "mention")`;
+    }
+    if (node.type === "status") {
+        return `\`[status:${node.attrs?.text ?? ""}|${node.attrs?.color ?? "neutral"}]\``;
+    }
+    if (node.type === "date") {
+        return `\`[date:${dateAttrToIso(node.attrs?.timestamp)}]\``;
+    }
+    if (node.type === "inlineExtension") {
+        return macroFence(node);
+    }
     if (node.type !== "text") {
         return renderInline(node.content);
     }
@@ -141,6 +248,15 @@ function renderText(node) {
     const link = marks.find((mark) => mark.type === "link");
     if (link) text = `[${text}](${link.attrs?.href ?? ""})`;
     return text;
+}
+
+function dateAttrToIso(timestamp) {
+    const ms = Number(timestamp);
+    return Number.isFinite(ms) ? new Date(ms).toISOString().slice(0, 10) : "";
+}
+
+function isoToDateAttr(iso) {
+    return String(Date.parse(iso));
 }
 
 function hasMark(marks, type) {
@@ -169,12 +285,17 @@ function indentContinuation(text, width) {
 
 const md = new MarkdownIt();
 
-// Link title sentinel -> smart card node type. See the header comment.
-const CARD_TITLES = { card: "inlineCard", "card-block": "blockCard", "card-embed": "embedCard" };
+// Link title sentinel -> smart card / mention node type. See the header comment.
+const CARD_TITLES = { card: "inlineCard", "card-block": "blockCard", "card-embed": "embedCard", mention: "mention" };
 
 // GFM alert kind -> ADF panelType, and its inverse. See the header comment.
 const ALERT_TO_PANEL = { NOTE: "note", TIP: "tip", IMPORTANT: "info", WARNING: "warning", CAUTION: "error" };
 const PANEL_TO_ALERT = Object.fromEntries(Object.entries(ALERT_TO_PANEL).map(([k, v]) => [v, k]));
+
+// Checkbox / decision markers at the start of a list item's first text node,
+// used to retype a plain bulletList into a taskList/decisionList after parsing.
+const CHECKBOX_MARKER = /^\[([ xX])\]\s?/;
+const DECISION_MARKER = /^\[decision\]\s?/;
 
 export function markdownToAdf(source) {
     const tokens = md.parse(source ?? "", {});
@@ -240,8 +361,13 @@ export function markdownToAdf(source) {
                 break;
             case "fence":
             case "code_block": {
+                const info = token.info?.trim() ?? "";
+                if (info === "confluence-macro") {
+                    top().content.push({ type: "extension", attrs: parseJson(token.content.replace(/\n$/, "")) });
+                    break;
+                }
                 const node = { type: "codeBlock" };
-                const lang = token.info?.trim().split(/\s+/)[0];
+                const lang = info.split(/\s+/)[0];
                 if (lang) node.attrs = { language: lang };
                 const code = token.content.replace(/\n$/, "");
                 if (code) node.content = [{ type: "text", text: code }];
@@ -254,18 +380,19 @@ export function markdownToAdf(source) {
             case "inline": {
                 const nodes = renderInlineTokens(token.children);
                 const parent = stack[stack.length - 2];
+
                 const isPanelCandidate =
                     top().type === "paragraph" &&
                     parent?.type === "blockquote" &&
                     parent.content.length === 1 &&
                     parent.content[0] === top();
-                const marker =
+                const panelMarker =
                     isPanelCandidate && nodes[0]?.type === "text" && !nodes[0].marks
                         ? nodes[0].text.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]$/i)
                         : null;
-                if (marker) {
+                if (panelMarker) {
                     parent.type = "panel";
-                    parent.attrs = { panelType: ALERT_TO_PANEL[marker[1].toUpperCase()] };
+                    parent.attrs = { panelType: ALERT_TO_PANEL[panelMarker[1].toUpperCase()] };
                     const rest = nodes.slice(1);
                     if (rest[0]?.type === "text" && !rest[0].marks && rest[0].text === " ") rest.shift();
                     if (rest.length === 0) {
@@ -275,6 +402,12 @@ export function markdownToAdf(source) {
                     }
                     break;
                 }
+
+                const soleText = nodes.length === 1 && nodes[0].type === "text" && !nodes[0].marks ? nodes[0].text : null;
+                if (soleText != null && handleSentinelParagraph(soleText, stack)) {
+                    break;
+                }
+
                 top().content.push(...nodes);
                 break;
             }
@@ -283,18 +416,140 @@ export function markdownToAdf(source) {
         }
     }
 
-    hoistBlockCards(doc.content);
+    retypeMarkedLists(doc.content);
+    hoistBlockLevelNodes(doc.content);
     return { version: 1, type: "doc", content: doc.content };
 }
 
-// Block/embed cards arrive wrapped in a paragraph (markdown-it parses their
-// link inline). ADF places them at block level, so lift a paragraph whose sole
-// child is a block/embed card up to where the paragraph sat. Inline cards are
-// genuinely inline and stay inside their paragraph.
-function hoistBlockCards(nodes) {
+// Recognize a standalone HTML-comment sentinel paragraph (layout / macro
+// wrapper markers -- see the header comment) and perform the corresponding
+// stack surgery instead of emitting it as a normal paragraph. Returns true
+// when the paragraph was consumed as a sentinel.
+function handleSentinelParagraph(text, stack) {
+    if (text === "<!-- layout -->") {
+        discardParagraph(stack);
+        push(stack, { type: "layoutSection", content: [] });
+        push(stack, { type: "layoutColumn", attrs: { width: 100 }, content: [] });
+        stack.push({ type: "sentinel" });
+        return true;
+    }
+    if (text === "<!-- layout-column -->") {
+        discardParagraph(stack);
+        stack.pop(); // close the previous layoutColumn
+        push(stack, { type: "layoutColumn", attrs: { width: 100 }, content: [] });
+        stack.push({ type: "sentinel" });
+        return true;
+    }
+    if (text === "<!-- /layout -->") {
+        discardParagraph(stack);
+        stack.pop(); // close the last layoutColumn
+        const section = stack.pop(); // close layoutSection
+        const width = 100 / section.content.length;
+        for (const column of section.content) {
+            column.attrs.width = width;
+        }
+        stack.push({ type: "sentinel" });
+        return true;
+    }
+    const macroOpen = text.match(/^<!-- confluence-macro (.+) -->$/);
+    if (macroOpen) {
+        discardParagraph(stack);
+        push(stack, { type: "bodiedExtension", attrs: parseJson(macroOpen[1]), content: [] });
+        stack.push({ type: "sentinel" });
+        return true;
+    }
+    if (text === "<!-- /confluence-macro -->") {
+        discardParagraph(stack);
+        stack.pop(); // close bodiedExtension
+        stack.push({ type: "sentinel" });
+        return true;
+    }
+    return false;
+}
+
+// Remove the paragraph that's currently open on the stack (opened by the
+// preceding paragraph_open) so a sentinel line never appears in the tree as
+// literal text. Leaves a stack frame for the upcoming paragraph_close to pop.
+function discardParagraph(stack) {
+    stack[stack.length - 2].content.pop();
+    stack.pop();
+}
+
+function parseJson(text) {
+    try {
+        return JSON.parse(text);
+    } catch {
+        return {};
+    }
+}
+
+// Retype a plain bulletList into a taskList or decisionList when every item
+// starts with a checkbox ("[ ] "/"[x] ") or "[decision] " marker, stripping
+// the marker text. Same "detect a text pattern, mutate node.type" idiom as
+// panel detection above.
+function retypeMarkedLists(nodes) {
     for (const node of nodes) {
         if (Array.isArray(node.content)) {
-            hoistBlockCards(node.content);
+            retypeMarkedLists(node.content);
+        }
+    }
+    for (const node of nodes) {
+        if (node.type !== "bulletList") {
+            continue;
+        }
+        const items = node.content ?? [];
+        if (items.length && items.every((item) => CHECKBOX_MARKER.test(firstItemText(item) ?? ""))) {
+            node.type = "taskList";
+            node.attrs = { localId: "" };
+            items.forEach((item, i) => {
+                const state = /^x$/i.test(CHECKBOX_MARKER.exec(firstItemText(item))[1]) ? "DONE" : "TODO";
+                stripFirstItemText(item, CHECKBOX_MARKER);
+                item.type = "taskItem";
+                item.attrs = { localId: String(i), state };
+            });
+        } else if (items.length && items.every((item) => DECISION_MARKER.test(firstItemText(item) ?? ""))) {
+            node.type = "decisionList";
+            node.attrs = { localId: "" };
+            items.forEach((item, i) => {
+                stripFirstItemText(item, DECISION_MARKER);
+                item.type = "decisionItem";
+                item.attrs = { localId: String(i) };
+            });
+        }
+    }
+}
+
+// Only a "simple" item -- exactly one paragraph, no sub-lists or extra blocks
+// -- can be represented as a taskItem/decisionItem, whose ADF content is
+// inline* directly (unlike listItem, which holds blocks). Anything more
+// complex is left as an ordinary bulletList item (the marker text stays
+// literal) rather than silently dropping the extra blocks.
+function firstItemText(item) {
+    const blocks = item.content ?? [];
+    if (blocks.length !== 1 || blocks[0].type !== "paragraph") {
+        return null;
+    }
+    const firstInline = blocks[0].content?.[0];
+    return firstInline?.type === "text" && !firstInline.marks ? firstInline.text : null;
+}
+
+// Strip the marker from the item's sole paragraph, then flatten the item's
+// content to that paragraph's inline nodes (taskItem/decisionItem shape).
+function stripFirstItemText(item, marker) {
+    const paragraph = item.content[0];
+    const firstInline = paragraph.content[0];
+    firstInline.text = firstInline.text.replace(marker, "");
+    item.content = firstInline.text === "" ? paragraph.content.slice(1) : paragraph.content;
+}
+
+// Block/embed cards and media arrive wrapped in a paragraph (markdown-it
+// parses their link/image inline). ADF places them at block level, so lift a
+// paragraph whose sole child is one of these up to where the paragraph sat.
+// Inline cards are genuinely inline and stay inside their paragraph.
+function hoistBlockLevelNodes(nodes) {
+    for (const node of nodes) {
+        if (Array.isArray(node.content)) {
+            hoistBlockLevelNodes(node.content);
         }
     }
     for (let i = 0; i < nodes.length; i++) {
@@ -302,7 +557,7 @@ function hoistBlockCards(nodes) {
         if (
             node.type === "paragraph" &&
             node.content?.length === 1 &&
-            (node.content[0].type === "blockCard" || node.content[0].type === "embedCard")
+            ["blockCard", "embedCard", "mediaSingle"].includes(node.content[0].type)
         ) {
             nodes[i] = node.content[0];
         }
@@ -317,8 +572,9 @@ function push(stack, node) {
 function renderInlineTokens(children) {
     const marks = [];
     const out = [];
-    // When set, we're inside a smart-card link: emit the card node on close and
-    // swallow its display text.
+    // When set, we're inside a smart-card or mention link: emit the node on
+    // close. Cards swallow their display text (it's always == the URL);
+    // mentions accumulate it as the display name.
     let card = null;
     const text = (content, extra) => {
         const all = extra ? [...marks, extra] : marks;
@@ -330,12 +586,32 @@ function renderInlineTokens(children) {
     for (const token of children ?? []) {
         switch (token.type) {
             case "text":
-                if (card) break;
+                if (card) {
+                    if (card.type === "mention") card.text += token.content;
+                    break;
+                }
                 if (token.content) text(token.content);
                 break;
-            case "code_inline":
-                text(token.content, { type: "code" });
+            case "code_inline": {
+                const sentinel = matchInlineSentinel(token.content);
+                if (sentinel) {
+                    out.push(sentinel);
+                } else {
+                    text(token.content, { type: "code" });
+                }
                 break;
+            }
+            case "image": {
+                const src = token.attrGet("src") ?? "";
+                if (src.startsWith("attachment:")) {
+                    out.push({
+                        type: "mediaSingle",
+                        attrs: { layout: "center" },
+                        content: [{ type: "media", attrs: { id: src.slice("attachment:".length), type: "file", alt: token.content ?? "" } }],
+                    });
+                }
+                break;
+            }
             case "strong_open":
                 marks.push({ type: "strong" });
                 break;
@@ -347,7 +623,9 @@ function renderInlineTokens(children) {
                 break;
             case "link_open": {
                 const type = CARD_TITLES[token.attrGet("title")];
-                if (type) {
+                if (type === "mention") {
+                    card = { type, id: token.attrGet("href") ?? "", text: "" };
+                } else if (type) {
                     card = { type, url: token.attrGet("href") ?? "" };
                 } else {
                     marks.push({ type: "link", attrs: { href: token.attrGet("href") ?? "" } });
@@ -365,7 +643,11 @@ function renderInlineTokens(children) {
                 break;
             case "link_close":
                 if (card) {
-                    out.push({ type: card.type, attrs: { url: card.url } });
+                    out.push(
+                        card.type === "mention"
+                            ? { type: "mention", attrs: { id: card.id, text: card.text } }
+                            : { type: card.type, attrs: { url: card.url } },
+                    );
                     card = null;
                 } else {
                     popMark(marks, "link");
@@ -382,6 +664,25 @@ function renderInlineTokens(children) {
         }
     }
     return out;
+}
+
+// Recognize the inline sentinel forms (status lozenge, date, macro without a
+// body) carried in a code span's raw text. Returns the ADF node, or null if
+// the code span is just ordinary inline code.
+function matchInlineSentinel(content) {
+    const status = content.match(/^\[status:([^|]+)\|(\w+)\]$/);
+    if (status) {
+        return { type: "status", attrs: { text: status[1], color: status[2] } };
+    }
+    const date = content.match(/^\[date:(\d{4}-\d{2}-\d{2})\]$/);
+    if (date) {
+        return { type: "date", attrs: { timestamp: isoToDateAttr(date[1]) } };
+    }
+    const macro = content.match(/^\[confluence-macro:(.+)\]$/);
+    if (macro) {
+        return { type: "inlineExtension", attrs: parseJson(macro[1]) };
+    }
+    return null;
 }
 
 function popMark(marks, type) {

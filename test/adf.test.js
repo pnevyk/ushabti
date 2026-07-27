@@ -238,3 +238,218 @@ test("round-trip: GFM alert survives adf conversion", () => {
     assert.equal(adfToMarkdown(markdownToAdf("> [!WARNING]\n> body text")), "> [!WARNING]\n> body text");
     assert.equal(adfToMarkdown(markdownToAdf("> [!TIP]\n> body text")), "> [!TIP]\n> body text");
 });
+
+test("adfToMarkdown: layout section renders columns with HTML-comment sentinels", () => {
+    const adf = doc({
+        type: "layoutSection",
+        content: [
+            { type: "layoutColumn", attrs: { width: 50 }, content: [{ type: "paragraph", content: [text("Left")] }] },
+            { type: "layoutColumn", attrs: { width: 50 }, content: [{ type: "paragraph", content: [text("Right")] }] },
+        ],
+    });
+    assert.equal(adfToMarkdown(adf), "<!-- layout -->\n\nLeft\n\n<!-- layout-column -->\n\nRight\n\n<!-- /layout -->");
+});
+
+test("markdownToAdf: layout sentinels become a layoutSection with even column widths", () => {
+    const adf = markdownToAdf("<!-- layout -->\n\nLeft\n\n<!-- layout-column -->\n\nRight\n\n<!-- /layout -->");
+    assert.deepEqual(adf.content[0], {
+        type: "layoutSection",
+        content: [
+            { type: "layoutColumn", attrs: { width: 50 }, content: [{ type: "paragraph", content: [text("Left")] }] },
+            { type: "layoutColumn", attrs: { width: 50 }, content: [{ type: "paragraph", content: [text("Right")] }] },
+        ],
+    });
+});
+
+test("round-trip: layout section survives adf conversion (width evens out)", () => {
+    const md = "<!-- layout -->\n\nLeft\n\n<!-- layout-column -->\n\nMiddle\n\n<!-- layout-column -->\n\nRight\n\n<!-- /layout -->";
+    assert.equal(adfToMarkdown(markdownToAdf(md)), md);
+});
+
+test("adfToMarkdown: extension/inlineExtension render as opaque macro descriptors", () => {
+    const block = doc({ type: "extension", attrs: { extensionKey: "toc", parameters: {} } });
+    assert.equal(adfToMarkdown(block), '```confluence-macro\n{"extensionKey":"toc","parameters":{}}\n```');
+
+    const inline = doc({ type: "paragraph", content: [text("See "), { type: "inlineExtension", attrs: { extensionKey: "status-lozenge" } }] });
+    assert.equal(adfToMarkdown(inline), 'See `[confluence-macro:{"extensionKey":"status-lozenge"}]`');
+});
+
+test("round-trip: extension/inlineExtension macros survive adf conversion", () => {
+    const adf = doc(
+        { type: "extension", attrs: { extensionKey: "toc", parameters: {} } },
+        { type: "paragraph", content: [{ type: "inlineExtension", attrs: { extensionKey: "status-lozenge" } }] },
+    );
+    assert.deepEqual(markdownToAdf(adfToMarkdown(adf)).content, adf.content);
+});
+
+test("adfToMarkdown: bodiedExtension wraps an editable body in macro sentinels", () => {
+    const adf = doc({
+        type: "bodiedExtension",
+        attrs: { extensionKey: "expand", parameters: { title: "Details" } },
+        content: [{ type: "paragraph", content: [text("Hidden body")] }],
+    });
+    assert.equal(
+        adfToMarkdown(adf),
+        '<!-- confluence-macro {"extensionKey":"expand","parameters":{"title":"Details"}} -->\n\nHidden body\n\n<!-- /confluence-macro -->',
+    );
+});
+
+test("round-trip: bodiedExtension survives adf conversion with an editable body", () => {
+    const adf = doc({
+        type: "bodiedExtension",
+        attrs: { extensionKey: "expand", parameters: { title: "Details" } },
+        content: [{ type: "paragraph", content: [text("Hidden body")] }],
+    });
+    assert.deepEqual(markdownToAdf(adfToMarkdown(adf)).content, adf.content);
+});
+
+test("adfToMarkdown: media renders as an attachment: image link", () => {
+    const adf = doc({
+        type: "mediaSingle",
+        attrs: { layout: "center" },
+        content: [{ type: "media", attrs: { id: "abc-123", type: "file", alt: "Diagram" } }],
+    });
+    assert.equal(adfToMarkdown(adf), "![Diagram](attachment:abc-123)");
+});
+
+test("adfToMarkdown: media without an id renders empty", () => {
+    const adf = doc({ type: "mediaSingle", attrs: {}, content: [{ type: "media", attrs: {} }] });
+    assert.equal(adfToMarkdown(adf), "");
+});
+
+test("markdownToAdf: attachment: image is hoisted to a block-level mediaSingle", () => {
+    const adf = markdownToAdf("![Diagram](attachment:abc-123)");
+    assert.deepEqual(adf.content[0], {
+        type: "mediaSingle",
+        attrs: { layout: "center" },
+        content: [{ type: "media", attrs: { id: "abc-123", type: "file", alt: "Diagram" } }],
+    });
+});
+
+test("markdownToAdf: a plain (non-attachment) image is dropped", () => {
+    const adf = markdownToAdf("![alt](https://example.com/pic.png)");
+    assert.deepEqual(adf.content[0], { type: "paragraph", content: [] });
+});
+
+test("round-trip: media survives adf conversion", () => {
+    const adf = doc({
+        type: "mediaSingle",
+        attrs: { layout: "center" },
+        content: [{ type: "media", attrs: { id: "abc-123", type: "file", alt: "Diagram" } }],
+    });
+    assert.deepEqual(markdownToAdf(adfToMarkdown(adf)).content, adf.content);
+});
+
+test("adfToMarkdown: mention renders as a sentinel-titled link", () => {
+    const adf = doc({ type: "paragraph", content: [text("cc "), { type: "mention", attrs: { id: "acc-1", text: "Jane Doe" } }] });
+    assert.equal(adfToMarkdown(adf), 'cc [Jane Doe](acc-1 "mention")');
+});
+
+test("markdownToAdf: sentinel-titled link becomes a mention", () => {
+    const adf = markdownToAdf('cc [Jane Doe](acc-1 "mention")');
+    assert.deepEqual(adf.content[0].content, [text("cc "), { type: "mention", attrs: { id: "acc-1", text: "Jane Doe" } }]);
+});
+
+test("round-trip: mention survives adf conversion", () => {
+    const adf = doc({ type: "paragraph", content: [{ type: "mention", attrs: { id: "acc-1", text: "Jane Doe" } }] });
+    assert.deepEqual(markdownToAdf(adfToMarkdown(adf)).content, adf.content);
+});
+
+test("adfToMarkdown: status renders as a code-span sentinel", () => {
+    const adf = doc({ type: "paragraph", content: [{ type: "status", attrs: { text: "In Progress", color: "blue" } }] });
+    assert.equal(adfToMarkdown(adf), "`[status:In Progress|blue]`");
+});
+
+test("adfToMarkdown: date renders as a code-span sentinel", () => {
+    const adf = doc({ type: "paragraph", content: [{ type: "date", attrs: { timestamp: String(Date.parse("2026-07-27")) } }] });
+    assert.equal(adfToMarkdown(adf), "`[date:2026-07-27]`");
+});
+
+test("markdownToAdf: status/date sentinels become their ADF nodes, plain code stays code", () => {
+    const adf = markdownToAdf("`[status:In Progress|blue]` `[date:2026-07-27]` `plain`");
+    assert.deepEqual(adf.content[0].content, [
+        { type: "status", attrs: { text: "In Progress", color: "blue" } },
+        text(" "),
+        { type: "date", attrs: { timestamp: String(Date.parse("2026-07-27")) } },
+        text(" "),
+        text("plain", [{ type: "code" }]),
+    ]);
+});
+
+test("round-trip: status and date survive adf conversion", () => {
+    const adf = doc({
+        type: "paragraph",
+        content: [
+            { type: "status", attrs: { text: "In Progress", color: "blue" } },
+            text(" "),
+            { type: "date", attrs: { timestamp: String(Date.parse("2026-07-27")) } },
+        ],
+    });
+    assert.deepEqual(markdownToAdf(adfToMarkdown(adf)).content, adf.content);
+});
+
+test("adfToMarkdown: taskList renders as GFM checkboxes", () => {
+    const adf = doc({
+        type: "taskList",
+        attrs: { localId: "" },
+        content: [
+            { type: "taskItem", attrs: { localId: "0", state: "DONE" }, content: [text("Ship it")] },
+            { type: "taskItem", attrs: { localId: "1", state: "TODO" }, content: [text("Write docs")] },
+        ],
+    });
+    assert.equal(adfToMarkdown(adf), "- [x] Ship it\n- [ ] Write docs");
+});
+
+test("markdownToAdf: a bullet list where every item is a checkbox becomes a taskList", () => {
+    const adf = markdownToAdf("- [x] Ship it\n- [ ] Write docs");
+    assert.deepEqual(adf.content[0], {
+        type: "taskList",
+        attrs: { localId: "" },
+        content: [
+            { type: "taskItem", attrs: { localId: "0", state: "DONE" }, content: [text("Ship it")] },
+            { type: "taskItem", attrs: { localId: "1", state: "TODO" }, content: [text("Write docs")] },
+        ],
+    });
+});
+
+test("markdownToAdf: a bullet list with a mix of checkbox and plain items stays a bulletList", () => {
+    const adf = markdownToAdf("- [ ] one\n- two");
+    assert.equal(adf.content[0].type, "bulletList");
+    assert.equal(adf.content[0].content[0].content[0].content[0].text, "[ ] one");
+});
+
+test("round-trip: taskList survives adf conversion", () => {
+    const adf = doc({
+        type: "taskList",
+        attrs: { localId: "" },
+        content: [{ type: "taskItem", attrs: { localId: "0", state: "TODO" }, content: [text("Write docs")] }],
+    });
+    assert.deepEqual(markdownToAdf(adfToMarkdown(adf)).content, adf.content);
+});
+
+test("adfToMarkdown: decisionList renders with a [decision] marker", () => {
+    const adf = doc({
+        type: "decisionList",
+        attrs: { localId: "" },
+        content: [{ type: "decisionItem", attrs: { localId: "0" }, content: [text("Ship Friday")] }],
+    });
+    assert.equal(adfToMarkdown(adf), "- [decision] Ship Friday");
+});
+
+test("markdownToAdf: a bullet list where every item has a [decision] marker becomes a decisionList", () => {
+    const adf = markdownToAdf("- [decision] Ship Friday");
+    assert.deepEqual(adf.content[0], {
+        type: "decisionList",
+        attrs: { localId: "" },
+        content: [{ type: "decisionItem", attrs: { localId: "0" }, content: [text("Ship Friday")] }],
+    });
+});
+
+test("round-trip: decisionList survives adf conversion", () => {
+    const adf = doc({
+        type: "decisionList",
+        attrs: { localId: "" },
+        content: [{ type: "decisionItem", attrs: { localId: "0" }, content: [text("Ship Friday")] }],
+    });
+    assert.deepEqual(markdownToAdf(adfToMarkdown(adf)).content, adf.content);
+});
