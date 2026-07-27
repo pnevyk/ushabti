@@ -1,0 +1,100 @@
+# Getting started
+
+This walks through installing ushabti and setting up a working config, from nothing to your first successful command.
+For the full list of config fields and what each one does, see the [configuration reference](reference/configuration.md).
+
+## Install
+
+ushabti requires Node.js 24 or newer.
+
+```sh
+git clone git@github.com:pnevyk/ushabti.git
+cd ushabti
+pnpm install
+npm install -g .
+```
+
+This installs the `ushabti` command globally, backed by the checked-out source.
+Confirm it worked:
+
+```sh
+ushabti --help
+```
+
+## Update
+
+```sh
+cd ushabti
+git pull
+
+# Not strictly necessary but safer.
+pnpm install
+npm install -g .
+```
+
+## Set up the config file
+
+ushabti reads credentials and settings from a TOML file, resolved from two places:
+
+1. `./ushabti.config.toml` — a project-local config, so different repos can use different credentials or fields.
+2. `~/.config/ushabti/config.toml` — a global config, for the defaults you want everywhere.
+
+Both are read when they exist, and merged field-by-field, with the project-local file taking precedence over the global one — so the local file only needs to state what it wants to override, not repeat the whole global config. Pass `--config <file>` on any command to use that file exclusively instead, skipping this merge entirely.
+
+Start from the example config:
+
+```sh
+mkdir -p ~/.config/ushabti
+ushabti config template > ~/.config/ushabti/config.toml
+```
+
+Put your durable, everywhere defaults (GitHub token, Atlassian credentials) in the global file. If one project needs its own credentials or Jira custom fields, run `ushabti config template > ushabti.config.toml` inside that project instead, and fill in only the fields that need to differ there.
+
+## Configure GitHub access
+
+`pr comments` and `pr digest` need a GitHub token with read access to the repositories you'll run them against.
+
+1. Create a token at [github.com/settings/tokens](https://github.com/settings/tokens) — a fine-grained token scoped to just the repositories you need, with read-only "Pull requests" access, is enough.
+2. Fill it in:
+
+   ```toml
+   [github]
+   token = "ghp_..."
+   ```
+
+## Configure Atlassian access
+
+`jira` and `confluence` commands share one set of Atlassian Cloud credentials.
+
+1. Create an API token at [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens).
+2. Fill in your site's base URL, the email address tied to the token, and the token itself:
+
+   ```toml
+   [atlassian]
+   baseUrl = "https://your-site.atlassian.net"
+   email = "you@example.com"
+   token = "..."
+   ```
+
+If your Jira project tracks story points or sprints in custom fields and you plan to read or write them through ushabti, also fill in `[jira] storyPointsField` / `sprintField` — see the [configuration reference](reference/configuration.md) for how to find their field ids.
+
+## Try it
+
+With `[github]` configured, from inside a repository with an open PR:
+
+```sh
+ushabti pr comments
+```
+
+With `[atlassian]` configured:
+
+```sh
+ushabti jira project --project ABC
+```
+
+Each should produce a local JSON or YAML file. If a command instead fails with `Missing config keys: ...`, double check the section it names in your config file.
+
+## Next steps
+
+- Walk through a concrete workflow in the [how-to guides](how-to/).
+- Look up every config field, or how ADF content maps to markdown, in the [reference](reference/).

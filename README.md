@@ -2,6 +2,13 @@
 
 A CLI tool for automating little tasks of a software engineer.
 
+Works with:
+- GitHub
+- Jira
+- Confluence
+
+Read the [docs](docs/) for more detailed getting started, how to guides and reference material.
+
 ## Quickstart
 
 Install:
