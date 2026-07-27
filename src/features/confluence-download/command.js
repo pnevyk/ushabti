@@ -21,7 +21,7 @@ export async function run(argv) {
         throw new CliError("Missing required --id <pageId>");
     }
 
-    const format = values.format ?? "json";
+    const format = values.format ?? "markdown";
     if (!FORMATS.includes(format)) {
         throw new CliError(`Invalid --format: ${format} (expected ${FORMATS.join("|")})`);
     }

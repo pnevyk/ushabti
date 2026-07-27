@@ -73,22 +73,23 @@ Fetch a project's Jira tickets, or a single ticket with --id.
 With --id, the ticket key already implies its project, so --project is not
 required (and is ignored).
 
-With --format markdown, writes one <ID>.md per ticket: YAML frontmatter
-(id, title, type, parent, storyPoints, assignee) plus the description body.
+Default format is markdown: one <ID>.md per ticket, YAML frontmatter (id,
+title, type, parent, storyPoints, assignee) plus the description body. Pass
+--format json for a single {tickets:[...]} file instead.
 
 Examples:
   ushabti jira fetch --project ABC
   ushabti jira fetch --project ABC --id ABC-123
-  ushabti jira fetch --project ABC --format markdown
-  ushabti jira fetch --project ABC --id ABC-123 --format markdown
+  ushabti jira fetch --project ABC --format json
+  ushabti jira fetch --project ABC --id ABC-123 --format json
 
 Options:
   --project <key>          Jira project key (required unless --id is given)
   --id <ticket-id>         Fetch only this ticket (e.g. ABC-123) instead of all
-  --format json|markdown   Output format (default: json)
-  --out <path>             Output file (json) or directory (markdown)
-                           Default (project): jira-<project>.ushabti.json or jira-<project>/
-                           Default (--id): jira-<id>.ushabti.json or <id>.md in cwd
+  --format json|markdown   Output format (default: markdown)
+  --out <path>             Output directory (markdown) or file (json)
+                           Default (project): jira-<project>/ or jira-<project>.ushabti.json
+                           Default (--id): <id>.md or jira-<id>.ushabti.json in cwd
   --config <file>          Config file path
   -h, --help               Show this help`,
     "jira comments": `Usage: ushabti jira comments --id <ticket-key> [--format json|markdown] [--out <path>]
@@ -96,19 +97,20 @@ Options:
 Fetch all comments of a single Jira ticket.
 
 Each comment carries id, author (display name), authorId (accountId), created,
-updated and body (rendered from ADF to markdown). With --format markdown, writes
-one file with a section per comment.
+updated and body (rendered from ADF to markdown). Default format is markdown:
+one file with a section per comment. Pass --format json for a single
+{comments:[...]} file instead.
 
 Examples:
   ushabti jira comments --id ABC-123
-  ushabti jira comments --id ABC-123 --format markdown
-  ushabti jira comments --id ABC-123 --out thread.json
+  ushabti jira comments --id ABC-123 --format json
+  ushabti jira comments --id ABC-123 --out thread.md
 
 Options:
   --id <ticket-key>        Ticket to fetch comments for, e.g. ABC-123 (required)
-  --format json|markdown   Output format (default: json)
+  --format json|markdown   Output format (default: markdown)
   --out <path>             Output file
-                           Default: jira-<id>-comments.ushabti.json or <id>-comments.md
+                           Default: <id>-comments.md or jira-<id>-comments.ushabti.json
   --config <file>          Config file path
   -h, --help               Show this help`,
     "jira project": `Usage: ushabti jira project --project <key> [--out <file>]
@@ -195,8 +197,9 @@ untrusted expressions.`,
 Fetch a single Confluence page's content (as Atlas Document Format, converted
 to markdown) to a local file.
 
-With --format markdown, writes YAML frontmatter (id, title, spaceId, parentId)
-plus the page body as markdown.
+Default format is markdown: YAML frontmatter (id, title, spaceId, parentId)
+plus the page body as markdown. Pass --format json for a single JSON object
+instead.
 
 With --children, --id may be a page or a folder: downloads it plus every
 descendant at any depth into a directory tree, one file per node
@@ -208,14 +211,14 @@ skipped, along with their own descendants, and reported on stderr.
 
 Examples:
   ushabti confluence download --id 12345
-  ushabti confluence download --id 12345 --format markdown
-  ushabti confluence download --id 12345 --children --format markdown
+  ushabti confluence download --id 12345 --format json
+  ushabti confluence download --id 12345 --children
 
 Options:
   --id <pageId>            Confluence page or folder id (required)
-  --format json|markdown   Output format (default: json)
+  --format json|markdown   Output format (default: markdown)
   --out <path>             Output file, or output directory with --children
-                           Default: confluence-<id>.ushabti.json or <id>.md
+                           Default: <id>.md or confluence-<id>.ushabti.json
                            Default with --children: confluence-<id>/
   --children               Also download every descendant, as a directory tree
   --config <file>          Config file path
