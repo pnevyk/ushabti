@@ -1,8 +1,11 @@
+import { dirname } from "node:path";
 import { resolveAtlassian } from "../../shared/config.js";
 import { createJiraClient } from "../../shared/jira-client.js";
 import { adfToMarkdown } from "../../shared/adf.js";
 import { serialize } from "../../shared/output/json.js";
 import { write } from "../../shared/output/file.js";
+import { findMediaIds, rewriteMediaLinks, downloadMedia } from "../../shared/media-download.js";
+import { resolveIssueMedia } from "../../shared/jira-media.js";
 
 // Orchestrates: fetch all comments of a single Jira ticket, map to a neutral
 // shape, then emit either one JSON file or a single markdown file.
@@ -21,11 +24,31 @@ export async function fetchComments({ id, format, out, config }) {
     }
 
     const comments = raw.map(toComment);
+    await downloadCommentsMedia(client, id, comments, dirname(out));
 
     if (format === "markdown") {
         await write(out, toMarkdown(id, comments));
     } else {
         await write(out, serialize({ comments }));
+    }
+}
+
+// Finds media references across all comment bodies and downloads/rewrites
+// them in place before the comments are written. Fetches the issue's
+// attachments (a call this feature otherwise never needs) only when at least
+// one comment actually references a media id. Not unit-tested directly (does
+// HTTP + filesystem I/O) -- same convention as confluence-download's
+// orchestrator functions.
+async function downloadCommentsMedia(client, id, comments, containingDir) {
+    const mediaIds = [...new Set(comments.flatMap((c) => findMediaIds(c.body)))];
+    if (!mediaIds.length) {
+        return;
+    }
+    const issue = await client.issues.getIssue({ issueIdOrKey: id, fields: ["attachment"] });
+    const resolve = await resolveIssueMedia(client, issue);
+    const idToFilename = await downloadMedia({ mediaIds, resolve, containingDir, baseName: id });
+    for (const comment of comments) {
+        comment.body = rewriteMediaLinks(comment.body, idToFilename);
     }
 }
 
