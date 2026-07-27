@@ -119,13 +119,16 @@ function formatNode(mapped, format) {
 }
 
 // Pure: a Confluence Page (v2 API, atlas_doc_format body) -> neutral shape.
-// Exported for unit testing.
+// `type` is the page's subtype ("page" or "live", i.e. a live doc) -- not
+// typed on this SDK's single-page response model, but present at runtime per
+// Atlassian's REST v2 docs. Exported for unit testing.
 export function toPage(page) {
     const raw = page.body?.atlas_doc_format?.value;
     const adf = raw ? JSON.parse(raw) : null;
     return {
         id: page.id ?? null,
         title: page.title ?? "",
+        type: page.subtype ?? "page",
         spaceId: page.spaceId ?? null,
         parentId: page.parentId ?? null,
         description: adfToMarkdown(adf),

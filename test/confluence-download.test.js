@@ -26,6 +26,7 @@ test("toPage maps standard fields and converts the ADF body to markdown", () => 
     assert.deepEqual(mapped, {
         id: "12345",
         title: "Runbook",
+        type: "page",
         spaceId: "999",
         parentId: "111",
         description: "Body text",
@@ -40,6 +41,11 @@ test("toPage nulls a missing parentId (top-level page)", () => {
 test("toPage empties the description when the page has no body", () => {
     const mapped = toPage(page({ body: undefined }));
     assert.equal(mapped.description, "");
+});
+
+test("toPage defaults type to \"page\" and passes through subtype \"live\"", () => {
+    assert.equal(toPage(page()).type, "page");
+    assert.equal(toPage(page({ subtype: "live" })).type, "live");
 });
 
 test("toFolder maps standard fields (no body/content)", () => {

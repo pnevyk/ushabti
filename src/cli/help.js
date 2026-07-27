@@ -197,15 +197,15 @@ untrusted expressions.`,
 Fetch a single Confluence page's content (as Atlas Document Format, converted
 to markdown) to a local file.
 
-Default format is markdown: YAML frontmatter (id, title, spaceId, parentId)
-plus the page body as markdown. Pass --format json for a single JSON object
-instead.
+Default format is markdown: YAML frontmatter (id, title, type, spaceId,
+parentId) plus the page body as markdown. type is "page" or "live" (a live
+doc). Pass --format json for a single JSON object instead.
 
 With --children, --id may be a page or a folder: downloads it plus every
 descendant at any depth into a directory tree, one file per node
 (<title>-<id>.<ext>) plus a same-named subdirectory for any node that has
 children. Confluence folders (which have no content of their own) become a
-file with just id/title/parentId and a subdirectory for their children.
+file with just id/title/type/parentId and a subdirectory for their children.
 Descendants of an unsupported type (whiteboard, database, embed, ...) are
 skipped, along with their own descendants, and reported on stderr.
 
