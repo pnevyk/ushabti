@@ -4,21 +4,55 @@ import { join } from "node:path";
 import { parse } from "smol-toml";
 import { CliError } from "./errors.js";
 
-// Candidate paths tried in order when no explicit path is given.
-const DEFAULT_PATHS = ["ushabti.config.toml", join(homedir(), ".config", "ushabti", "config.toml")];
+const LOCAL_PATH = "ushabti.config.toml";
+const GLOBAL_PATH = join(homedir(), ".config", "ushabti", "config.toml");
 
+// An explicit --config path is used exclusively (no merging). Otherwise,
+// local and global are merged when both exist, local winning key-by-key, so
+// a project-local file only needs to state what it overrides -- either may
+// be absent, but at least one must exist.
 export function loadConfig(path) {
-    const candidates = path ? [path] : DEFAULT_PATHS;
-    for (const candidate of candidates) {
-        let raw;
-        try {
-            raw = readFileSync(candidate, "utf8");
-        } catch {
-            continue;
+    if (path) {
+        const config = tryParse(path);
+        if (!config) {
+            throw new CliError(`Config file not found: ${path}`);
         }
-        return parse(raw);
+        return config;
     }
-    throw new CliError(`Config file not found: ${candidates.join(", ")}`);
+
+    const local = tryParse(LOCAL_PATH);
+    const global = tryParse(GLOBAL_PATH);
+    if (!local && !global) {
+        throw new CliError(`Config file not found: ${LOCAL_PATH}, ${GLOBAL_PATH}`);
+    }
+    return mergeConfig(global ?? {}, local ?? {});
+}
+
+function tryParse(path) {
+    let raw;
+    try {
+        raw = readFileSync(path, "utf8");
+    } catch {
+        return null;
+    }
+    return parse(raw);
+}
+
+// Pure: deep-merge two parsed config objects, `override` taking precedence
+// key-by-key over `base` (recursing into nested tables like
+// [confluence.plugins]) -- so a project-local file only needs to specify the
+// fields it wants to change, not repeat everything from the global file.
+// Exported for unit testing.
+export function mergeConfig(base, override) {
+    const result = { ...base };
+    for (const [key, value] of Object.entries(override)) {
+        result[key] = isPlainObject(value) && isPlainObject(base[key]) ? mergeConfig(base[key], value) : value;
+    }
+    return result;
+}
+
+function isPlainObject(value) {
+    return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
 // Resolve Atlassian Cloud credentials (shared by Jira and Confluence): prefer

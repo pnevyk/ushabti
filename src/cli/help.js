@@ -20,7 +20,8 @@ Run \`ushabti <group> <command> --help\` for options and examples.
 
 Global options:
   -h, --help     Show this help
-  --config       Config file (default: ./ushabti.config.toml, then ~/.config/ushabti/config.toml)
+  --config       Config file, used exclusively; without it, ./ushabti.config.toml
+                 is merged over ~/.config/ushabti/config.toml (local wins)
 `);
 }
 
