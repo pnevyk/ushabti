@@ -13,6 +13,7 @@ Commands:
   jira update            Update a Jira ticket from a markdown file
   jira filter            Filter locally fetched tickets by a JS expression
   confluence download    Fetch a Confluence page to JSON or markdown
+  confluence create      Create a Confluence page from a markdown file
 
 Run \`ushabti <group> <command> --help\` for options and examples.
 
@@ -207,6 +208,24 @@ Options:
                            Default: confluence-<id>.ushabti.json or <id>.md
   --config <file>          Config file path
   -h, --help               Show this help`,
+    "confluence create": `Usage: ushabti confluence create --space <key> --file <markdown> [--update]
+
+Create a new Confluence page from a markdown file with YAML frontmatter.
+
+Frontmatter: title (required), parent (optional, a page id to nest under).
+The body becomes the page content.
+
+Examples:
+  ushabti confluence create --space ENG --file page.md
+  ushabti confluence create --space ENG --file page.md --update
+
+Options:
+  --space <key>       Confluence space key (required)
+  --file <markdown>   Markdown file describing the page (required)
+  --update            After creation, write id into frontmatter and rename
+                      the file to <id>.md
+  --config <file>     Config file path
+  -h, --help          Show this help`,
 };
 
 export function printCommandHelp(key) {

@@ -15,6 +15,7 @@ test("subcommand help runs without dispatching the command", async () => {
     await run(["pr", "comments", "--help"]);
 });
 
-test("confluence download subcommand is wired up", async () => {
+test("confluence download and create subcommands are wired up", async () => {
     await run(["confluence", "download", "--help"]);
+    await run(["confluence", "create", "--help"]);
 });
