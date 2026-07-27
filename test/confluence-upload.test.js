@@ -26,3 +26,21 @@ test("toUpdateBody renames the page when frontmatter provides a title", () => {
     assert.equal(pageBody.title, "New title");
     assert.equal(pageBody.version.number, 2);
 });
+
+test("toUpdateBody includes parentId when frontmatter provides it", () => {
+    const pageBody = toUpdateBody({
+        data: { id: "12345", parentId: "999" },
+        body: "",
+        current: { title: "Runbook", version: { number: 1 } },
+    });
+    assert.equal(pageBody.parentId, "999");
+});
+
+test("toUpdateBody omits parentId when frontmatter doesn't provide it", () => {
+    const pageBody = toUpdateBody({
+        data: { id: "12345" },
+        body: "",
+        current: { title: "Runbook", version: { number: 1 } },
+    });
+    assert.equal("parentId" in pageBody, false);
+});

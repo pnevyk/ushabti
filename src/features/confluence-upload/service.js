@@ -31,11 +31,15 @@ export async function uploadPage({ file, config }) {
 // Pure: frontmatter + body + the page's current version -> Confluence
 // updatePage `body` payload. Exported for tests.
 export function toUpdateBody({ data, body, current }) {
-    return {
+    const pageBody = {
         id: String(data.id),
         status: "current",
         title: data.title ?? current.title,
         body: { representation: "atlas_doc_format", value: JSON.stringify(markdownToAdf(body)) },
         version: { number: (current.version?.number ?? 0) + 1 },
     };
+    if (data.parentId != null) {
+        pageBody.parentId = String(data.parentId);
+    }
+    return pageBody;
 }

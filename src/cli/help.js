@@ -228,8 +228,9 @@ Options:
 
 Create a new Confluence page from a markdown file with YAML frontmatter.
 
-Frontmatter: title (required), parent (optional, a page id to nest under).
-The body becomes the page content.
+Frontmatter: title (required), parentId (optional, a page id to nest under),
+type (optional, "page" (default) or "live" to create a live doc). The body
+becomes the page content.
 
 Examples:
   ushabti confluence create --space ENG --file page.md
@@ -247,11 +248,13 @@ Options:
 Update an existing Confluence page from a markdown file with YAML frontmatter.
 
 The page id is read from frontmatter \`id\` (as written by \`confluence create
---update\` or \`confluence download --format markdown\`). title is optional
-(only updated if present); the body always replaces the page content. The
-current page version is fetched automatically to satisfy Confluence's
-optimistic-locking requirement (version.number must increment by exactly 1) --
-no version field is needed in frontmatter.
+--update\` or \`confluence download\`). title and parentId are optional (only
+applied if present; parentId moves the page under a new parent); the body
+always replaces the page content. The current page version is fetched
+automatically to satisfy Confluence's optimistic-locking requirement
+(version.number must increment by exactly 1) -- no version field is needed in
+frontmatter. type is not supported here -- a page's subtype (page vs. live
+doc) can't be changed after creation.
 
 Examples:
   ushabti confluence upload --file 12345.md

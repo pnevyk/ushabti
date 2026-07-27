@@ -6,11 +6,12 @@ import { createConfluenceClient } from "../../shared/confluence-client.js";
 import { markdownToAdf } from "../../shared/adf.js";
 import { parse, stringify } from "../../shared/frontmatter.js";
 import { write } from "../../shared/output/file.js";
+import { nodeFilename } from "../../shared/confluence-naming.js";
 
 // Orchestrates: resolve a space key to its id, read a markdown file, map
 // frontmatter + body to a Confluence page, create it, and report the new
 // page's url. With `update`, write the new id back into the source file and
-// rename it to <id>.md.
+// rename it to <title>-<id>.md, matching confluence download's naming.
 export async function createPage({ space, file, update, config }) {
     const { baseUrl } = resolveAtlassian(config);
     const client = createConfluenceClient(config);
@@ -31,7 +32,7 @@ export async function createPage({ space, file, update, config }) {
     console.log(`Created ${created.id}: ${url}`);
 
     if (update) {
-        const newPath = join(dirname(file), `${created.id}.md`);
+        const newPath = join(dirname(file), nodeFilename({ id: created.id, title: data.title }, "md"));
         await write(newPath, applyCreatedId({ data, body, id: created.id }));
         if (newPath !== file) {
             await unlink(file);
@@ -62,8 +63,11 @@ export function toCreateBody({ data, body, spaceId }) {
         title: data.title,
         body: { representation: "atlas_doc_format", value: JSON.stringify(markdownToAdf(body)) },
     };
-    if (data.parent != null) {
-        pageBody.parentId = String(data.parent);
+    if (data.parentId != null) {
+        pageBody.parentId = String(data.parentId);
+    }
+    if (data.type === "live") {
+        pageBody.subtype = "live";
     }
     return pageBody;
 }

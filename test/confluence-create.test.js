@@ -15,13 +15,23 @@ test("toCreateBody builds required fields with ADF body", () => {
     assert.equal("parentId" in pageBody, false);
 });
 
-test("toCreateBody includes optional parent", () => {
-    const pageBody = toCreateBody({ data: { title: "Runbook", parent: "111" }, body: "", spaceId: "999" });
+test("toCreateBody includes optional parentId", () => {
+    const pageBody = toCreateBody({ data: { title: "Runbook", parentId: "111" }, body: "", spaceId: "999" });
     assert.equal(pageBody.parentId, "111");
 });
 
 test("toCreateBody requires title", () => {
     assert.throws(() => toCreateBody({ data: {}, body: "", spaceId: "999" }), CliError);
+});
+
+test("toCreateBody sets subtype live when frontmatter type is live", () => {
+    const pageBody = toCreateBody({ data: { title: "Runbook", type: "live" }, body: "", spaceId: "999" });
+    assert.equal(pageBody.subtype, "live");
+});
+
+test("toCreateBody omits subtype for a regular page (default or explicit type: page)", () => {
+    assert.equal("subtype" in toCreateBody({ data: { title: "Runbook" }, body: "", spaceId: "999" }), false);
+    assert.equal("subtype" in toCreateBody({ data: { title: "Runbook", type: "page" }, body: "", spaceId: "999" }), false);
 });
 
 test("applyCreatedId sets id as the first frontmatter field and preserves body", () => {
