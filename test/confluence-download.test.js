@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toPage, toFolder, groupByParent, pruneTree } from "../src/features/confluence-download/service.js";
+import { toPage, toFolder, groupByParent, pruneTree, matchAttachmentByFileId } from "../src/features/confluence-download/service.js";
 
 const adf = (text) => JSON.stringify({ version: 1, type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] });
 
@@ -113,4 +113,17 @@ test("pruneTree drops an unsupported content type and prunes its whole subtree",
     assert.equal(keptChildrenByParent.get("1"), undefined);
     assert.equal(keptChildrenByParent.get("2"), undefined);
     assert.deepEqual(skipped, [{ id: "2", title: "Board", type: "whiteboard", reason: "unsupported content type: whiteboard" }]);
+});
+
+const attachments = [
+    { fileId: "media-1", title: "one.png", downloadLink: "/download/one.png" },
+    { fileId: "media-2", title: "two.jpg", downloadLink: "/download/two.jpg" },
+];
+
+test("matchAttachmentByFileId finds the attachment with the matching Media Services id", () => {
+    assert.deepEqual(matchAttachmentByFileId(attachments, "media-2"), attachments[1]);
+});
+
+test("matchAttachmentByFileId returns null when no attachment matches (deleted/permissions/non-image link)", () => {
+    assert.equal(matchAttachmentByFileId(attachments, "media-404"), null);
 });

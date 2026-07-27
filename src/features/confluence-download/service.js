@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { isNotFoundError } from "confluence.js";
 import { resolveAtlassian } from "../../shared/config.js";
 import { createConfluenceClient } from "../../shared/confluence-client.js";
@@ -7,19 +7,23 @@ import { serialize } from "../../shared/output/json.js";
 import { stringify } from "../../shared/frontmatter.js";
 import { write, ensureDir } from "../../shared/output/file.js";
 import { nodeBasename, nodeFilename } from "../../shared/confluence-naming.js";
+import { findMediaIds, rewriteMediaLinks, downloadMedia } from "../../shared/media-download.js";
+import { CliError } from "../../shared/errors.js";
 
 // Orchestrates: fetch a single Confluence page (as Atlas Document Format),
 // map it to a neutral shape, then emit either a JSON file or a markdown file
 // with YAML frontmatter.
 export async function downloadPage({ id, format, out, config }) {
-    resolveAtlassian(config);
+    const credentials = resolveAtlassian(config);
 
     const client = createConfluenceClient(config);
     const page = await client.page.getPageById({ id: Number(id), bodyFormat: "atlas_doc_format" });
     const mapped = toPage(page);
 
     const ext = format === "markdown" ? "md" : "ushabti.json";
-    await write(out ?? nodeFilename(mapped, ext), formatNode(mapped, format));
+    const outPath = out ?? nodeFilename(mapped, ext);
+    await downloadNodeMedia(client, mapped, dirname(outPath), credentials);
+    await write(outPath, formatNode(mapped, format));
 }
 
 // Orchestrates: resolve whether --id is a page or a folder, fetch its entire
@@ -28,7 +32,7 @@ export async function downloadPage({ id, format, out, config }) {
 // recursively fetch and write each kept node -- one file per node, plus a
 // same-named directory for any node with kept children.
 export async function downloadTree({ id, format, out, config }) {
-    resolveAtlassian(config);
+    const credentials = resolveAtlassian(config);
     const client = createConfluenceClient(config);
 
     const root = await resolveRoot(client, Number(id));
@@ -41,7 +45,7 @@ export async function downloadTree({ id, format, out, config }) {
     }
 
     await ensureDir(out);
-    await writeNode(client, root.mapped, out, format, keptChildrenByParent);
+    await writeNode(client, root.mapped, out, format, keptChildrenByParent, credentials);
 }
 
 // Try the page first, since that's the overwhelmingly common root; fall back
@@ -92,7 +96,8 @@ function nextCursor(links) {
 // same-named directory for any node that has kept children. Not pure (does
 // HTTP + filesystem I/O), so not unit-tested directly -- same convention as
 // the rest of this codebase's orchestrator functions.
-async function writeNode(client, mapped, containingDir, format, keptChildrenByParent) {
+async function writeNode(client, mapped, containingDir, format, keptChildrenByParent, credentials) {
+    await downloadNodeMedia(client, mapped, containingDir, credentials);
     const ext = format === "markdown" ? "md" : "ushabti.json";
     await write(join(containingDir, nodeFilename(mapped, ext)), formatNode(mapped, format));
 
@@ -108,8 +113,69 @@ async function writeNode(client, mapped, containingDir, format, keptChildrenByPa
             child.type === "folder"
                 ? toFolder(await client.folder.getFolderById({ id: Number(child.id) }))
                 : toPage(await client.page.getPageById({ id: Number(child.id), bodyFormat: "atlas_doc_format" }));
-        await writeNode(client, childMapped, childDir, format, keptChildrenByParent);
+        await writeNode(client, childMapped, childDir, format, keptChildrenByParent, credentials);
     }
+}
+
+// Finds this node's own media references and downloads/rewrites them in
+// place before the node is written -- a folder's `mapped.description` is
+// undefined, so findMediaIds short-circuits to [] and no resolvePageMedia
+// call happens for those. Runs as a separate pass after toPage/toFolder so
+// those mapping functions stay pure and testable; only this step does I/O.
+async function downloadNodeMedia(client, mapped, containingDir, credentials) {
+    const mediaIds = findMediaIds(mapped.description);
+    if (!mediaIds.length) {
+        return;
+    }
+    const resolve = await resolvePageMedia(client, Number(mapped.id), credentials);
+    const idToFilename = await downloadMedia({ mediaIds, resolve, containingDir, baseName: nodeBasename(mapped) });
+    mapped.description = rewriteMediaLinks(mapped.description, idToFilename);
+}
+
+// Pure: match a target Media Services file id against a page's attachment
+// list. Exported for unit testing.
+export function matchAttachmentByFileId(attachments, mediaId) {
+    return attachments.find((a) => a.fileId === mediaId) ?? null;
+}
+
+// Impure (I/O): fetch all of a page's attachments (paginated, same cursor
+// convention as fetchDescendants), then return a resolve(mediaId) closure
+// that matches against them and downloads bytes via a raw authenticated
+// fetch -- confluence.js has no typed byte-download method for full
+// attachment content, only a thumbnail one (getAttachmentThumbnailById,
+// the wrong thing).
+async function resolvePageMedia(client, pageId, credentials) {
+    const attachments = [];
+    let cursor;
+    do {
+        const page = await client.attachment.getPageAttachments({ id: pageId, cursor });
+        attachments.push(...(page.results ?? []));
+        cursor = nextCursor(page._links);
+    } while (cursor);
+
+    return async (mediaId) => {
+        const match = matchAttachmentByFileId(attachments, mediaId);
+        if (!match) {
+            return null;
+        }
+        return { filename: match.title, fetchBytes: () => fetchAttachmentBytes(match.downloadLink, credentials) };
+    };
+}
+
+// Raw fetch against the attachment's downloadLink, using the same Basic auth
+// as the JSON API. downloadLink is relative to the site's "/wiki" path (the
+// Confluence web app root), not to `baseUrl` itself -- `baseUrl` is the bare
+// site URL confluence.js's own client config expects (no "/wiki"), confirmed
+// live: the v2 API's returned downloadLink 404s without this prefix and
+// resolves correctly with it.
+async function fetchAttachmentBytes(downloadLink, { baseUrl, email, token }) {
+    const url = new URL(`/wiki${downloadLink}`, baseUrl);
+    const auth = Buffer.from(`${email}:${token}`).toString("base64");
+    const response = await fetch(url, { headers: { Authorization: `Basic ${auth}` } });
+    if (!response.ok) {
+        throw new CliError(`Failed to download attachment: ${response.status} ${response.statusText}`);
+    }
+    return Buffer.from(await response.arrayBuffer());
 }
 
 function formatNode(mapped, format) {
