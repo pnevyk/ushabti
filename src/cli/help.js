@@ -190,7 +190,7 @@ Options:
 
 Note: --where is evaluated with new Function over local input; do not pass
 untrusted expressions.`,
-    "confluence download": `Usage: ushabti confluence download --id <pageId> [--format json|markdown] [--out <path>]
+    "confluence download": `Usage: ushabti confluence download --id <pageId> [--format json|markdown] [--out <path>] [--children]
 
 Fetch a single Confluence page's content (as Atlas Document Format, converted
 to markdown) to a local file.
@@ -198,15 +198,26 @@ to markdown) to a local file.
 With --format markdown, writes YAML frontmatter (id, title, spaceId, parentId)
 plus the page body as markdown.
 
+With --children, --id may be a page or a folder: downloads it plus every
+descendant at any depth into a directory tree, one file per node
+(<title>-<id>.<ext>) plus a same-named subdirectory for any node that has
+children. Confluence folders (which have no content of their own) become a
+file with just id/title/parentId and a subdirectory for their children.
+Descendants of an unsupported type (whiteboard, database, embed, ...) are
+skipped, along with their own descendants, and reported on stderr.
+
 Examples:
   ushabti confluence download --id 12345
   ushabti confluence download --id 12345 --format markdown
+  ushabti confluence download --id 12345 --children --format markdown
 
 Options:
-  --id <pageId>            Confluence page id (required)
+  --id <pageId>            Confluence page or folder id (required)
   --format json|markdown   Output format (default: json)
-  --out <path>             Output file
+  --out <path>             Output file, or output directory with --children
                            Default: confluence-<id>.ushabti.json or <id>.md
+                           Default with --children: confluence-<id>/
+  --children               Also download every descendant, as a directory tree
   --config <file>          Config file path
   -h, --help               Show this help`,
     "confluence create": `Usage: ushabti confluence create --space <key> --file <markdown> [--update]

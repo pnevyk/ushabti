@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
 import { CliError } from "../../shared/errors.js";
-import { downloadPage } from "./service.js";
+import { downloadPage, downloadTree } from "./service.js";
 
 const FORMATS = ["json", "markdown"];
 
@@ -12,6 +12,7 @@ export async function run(argv) {
             id: { type: "string" },
             format: { type: "string" },
             out: { type: "string" },
+            children: { type: "boolean" },
             config: { type: "string" },
         },
     });
@@ -25,9 +26,14 @@ export async function run(argv) {
         throw new CliError(`Invalid --format: ${format} (expected ${FORMATS.join("|")})`);
     }
 
-    const out = values.out ?? defaultOut(values.id, format);
     const config = loadConfig(values.config);
-    await downloadPage({ id: values.id, format, out, config });
+    if (values.children) {
+        const out = values.out ?? `confluence-${values.id}`;
+        await downloadTree({ id: values.id, format, out, config });
+    } else {
+        const out = values.out ?? defaultOut(values.id, format);
+        await downloadPage({ id: values.id, format, out, config });
+    }
 }
 
 function defaultOut(id, format) {
