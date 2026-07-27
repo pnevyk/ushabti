@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { requireKeys } from "../../shared/config.js";
+import { resolveAtlassian } from "../../shared/config.js";
 import { CliError } from "../../shared/errors.js";
 import { createJiraClient } from "../../shared/jira-client.js";
 import { markdownToAdf } from "../../shared/adf.js";
@@ -8,7 +8,7 @@ import { parse } from "../../shared/frontmatter.js";
 // Read a markdown file, take the issue key from frontmatter `id`, map the rest
 // of the frontmatter + body to a Jira update payload, and edit the ticket.
 export async function updateTicket({ file, config }) {
-    requireKeys(config, ["jira.baseUrl", "jira.email", "jira.token"]);
+    resolveAtlassian(config);
     const spField = config.jira.storyPointsField || null;
     const sprintField = config.jira.sprintField || null;
 

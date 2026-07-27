@@ -1,6 +1,6 @@
 import { readFile, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { requireKeys } from "../../shared/config.js";
+import { resolveAtlassian } from "../../shared/config.js";
 import { CliError } from "../../shared/errors.js";
 import { createJiraClient } from "../../shared/jira-client.js";
 import { markdownToAdf } from "../../shared/adf.js";
@@ -11,7 +11,7 @@ import { write } from "../../shared/output/file.js";
 // create it, and report the new key. With `update`, write the new key back
 // into the source file and rename it to <KEY>.md.
 export async function createTicket({ file, project, update, config }) {
-    requireKeys(config, ["jira.baseUrl", "jira.email", "jira.token"]);
+    resolveAtlassian(config);
     const spField = config.jira.storyPointsField || null;
     const sprintField = config.jira.sprintField || null;
 

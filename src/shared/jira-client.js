@@ -1,10 +1,12 @@
 import { Version3Client, AgileClient } from "jira.js";
+import { resolveAtlassian } from "./config.js";
 
 function auth(config) {
+    const { baseUrl, email, token } = resolveAtlassian(config);
     return {
-        host: config.jira.baseUrl,
+        host: baseUrl,
         authentication: {
-            basic: { email: config.jira.email, apiToken: config.jira.token },
+            basic: { email, apiToken: token },
         },
     };
 }

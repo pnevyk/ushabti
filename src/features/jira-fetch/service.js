@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { requireKeys } from "../../shared/config.js";
+import { resolveAtlassian } from "../../shared/config.js";
 import { createJiraClient } from "../../shared/jira-client.js";
 import { adfToMarkdown } from "../../shared/adf.js";
 import { serialize } from "../../shared/output/json.js";
@@ -9,7 +9,7 @@ import { write, ensureDir } from "../../shared/output/file.js";
 // Orchestrates: query all Jira tickets for a project, map to a neutral shape,
 // then emit either one JSON file or a directory of per-ticket markdown files.
 export async function fetchTickets({ project, id, format, out, config }) {
-    requireKeys(config, ["jira.baseUrl", "jira.email", "jira.token"]);
+    resolveAtlassian(config);
     const spField = config.jira.storyPointsField || null;
     const sprintField = config.jira.sprintField || null;
 

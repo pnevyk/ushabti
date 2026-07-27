@@ -1,4 +1,4 @@
-import { requireKeys } from "../../shared/config.js";
+import { resolveAtlassian } from "../../shared/config.js";
 import { createJiraClient } from "../../shared/jira-client.js";
 import { adfToMarkdown } from "../../shared/adf.js";
 import { serialize } from "../../shared/output/json.js";
@@ -7,7 +7,7 @@ import { write } from "../../shared/output/file.js";
 // Orchestrates: fetch all comments of a single Jira ticket, map to a neutral
 // shape, then emit either one JSON file or a single markdown file.
 export async function fetchComments({ id, format, out, config }) {
-    requireKeys(config, ["jira.baseUrl", "jira.email", "jira.token"]);
+    resolveAtlassian(config);
 
     const client = createJiraClient(config);
     const raw = [];

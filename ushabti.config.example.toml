@@ -1,10 +1,13 @@
 [github]
 token = ""
 
-[jira]
+# Shared Atlassian Cloud credentials, used by both jira and confluence commands.
+[atlassian]
 baseUrl = ""
 email = ""
 token = ""
+
+[jira]
 # Custom field id for story points, e.g. "customfield_10026". Optional.
 storyPointsField = ""
 # Custom field id for sprint, e.g. "customfield_10020". Optional.

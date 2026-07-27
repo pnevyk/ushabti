@@ -1,5 +1,5 @@
 import { stringify as stringifyYaml } from "yaml";
-import { requireKeys } from "../../shared/config.js";
+import { resolveAtlassian } from "../../shared/config.js";
 import { createJiraClient, createJiraAgileClient } from "../../shared/jira-client.js";
 import { write } from "../../shared/output/file.js";
 
@@ -9,7 +9,7 @@ const PAGE_SIZE = 50;
 // its sprints), then emit one YAML reference file mapping names to the ids used
 // by the assignee and sprint fields.
 export async function fetchProject({ project, out, config }) {
-    requireKeys(config, ["jira.baseUrl", "jira.email", "jira.token"]);
+    resolveAtlassian(config);
     const client = createJiraClient(config);
     const agile = createJiraAgileClient(config);
 
