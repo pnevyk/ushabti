@@ -19,4 +19,13 @@ test("confluence subcommands are wired up", async () => {
     await run(["confluence", "download", "--help"]);
     await run(["confluence", "create", "--help"]);
     await run(["confluence", "upload", "--help"]);
+    await run(["confluence", "template", "--help"]);
+});
+
+test("jira template is wired up", async () => {
+    await run(["jira", "template", "--help"]);
+});
+
+test("config template is wired up", async () => {
+    await run(["config", "template", "--help"]);
 });

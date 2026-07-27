@@ -4,6 +4,7 @@ export function printHelp() {
 Usage: ushabti <group> <command> [options]
 
 Commands:
+  config template        Print an example config file
   pr comments            Fetch unresolved PR review threads to JSON
   pr digest              Fetch merged-PR history in a date window to JSON
   jira fetch             Fetch a project's tickets to JSON or markdown
@@ -12,9 +13,11 @@ Commands:
   jira create            Create a Jira ticket from a markdown file
   jira update            Update a Jira ticket from a markdown file
   jira filter            Filter locally fetched tickets by a JS expression
+  jira template          Print an example ticket markdown file
   confluence download    Fetch a Confluence page to JSON or markdown
   confluence create      Create a Confluence page from a markdown file
   confluence upload      Update a Confluence page from a markdown file
+  confluence template    Print an example page markdown file
 
 Run \`ushabti <group> <command> --help\` for options and examples.
 
@@ -27,6 +30,14 @@ Global options:
 
 // Per-command help, keyed by "<group> <sub>".
 const COMMAND_HELP = {
+    "config template": `Usage: ushabti config template
+
+Print the example config file (ushabti.config.example.toml), with every field
+present but blank or commented out. Redirect to a file to start a new config:
+\`ushabti config template > ushabti.config.toml\`.
+
+Options:
+  -h, --help    Show this help`,
     "pr comments": `Usage: ushabti pr comments [--pr <n>] [--repo <owner/name>] [--out <file>] [--all]
 
 Fetch unresolved review comment threads on a PR into a JSON file.
@@ -193,6 +204,14 @@ Options:
 
 Note: --where is evaluated with new Function over local input; do not pass
 untrusted expressions.`,
+    "jira template": `Usage: ushabti jira template
+
+Print an example ticket markdown file for project ABC, with optional
+frontmatter fields present but commented out. Redirect to a file to start a
+new ticket: \`ushabti jira template > ticket.md\`.
+
+Options:
+  -h, --help    Show this help`,
     "confluence download": `Usage: ushabti confluence download --id <pageId> [--format json|markdown] [--out <path>] [--children]
 
 Fetch a single Confluence page's content (as Atlas Document Format, converted
@@ -264,6 +283,14 @@ Options:
   --file <markdown>   Markdown file describing the update (required)
   --config <file>     Config file path
   -h, --help          Show this help`,
+    "confluence template": `Usage: ushabti confluence template
+
+Print an example page markdown file for space ABC, with optional frontmatter
+fields present but commented out. Redirect to a file to start a new page:
+\`ushabti confluence template > page.md\`.
+
+Options:
+  -h, --help    Show this help`,
 };
 
 export function printCommandHelp(key) {
