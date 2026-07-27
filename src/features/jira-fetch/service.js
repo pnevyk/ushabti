@@ -1,10 +1,12 @@
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { resolveAtlassian } from "../../shared/config.js";
 import { createJiraClient } from "../../shared/jira-client.js";
 import { adfToMarkdown } from "../../shared/adf.js";
 import { serialize } from "../../shared/output/json.js";
 import { stringify } from "../../shared/frontmatter.js";
 import { write, ensureDir } from "../../shared/output/file.js";
+import { findMediaIds, rewriteMediaLinks, downloadMedia } from "../../shared/media-download.js";
+import { resolveIssueMedia } from "../../shared/jira-media.js";
 
 // Orchestrates: query all Jira tickets for a project, map to a neutral shape,
 // then emit either one JSON file or a directory of per-ticket markdown files.
@@ -14,16 +16,15 @@ export async function fetchTickets({ project, id, format, out, config }) {
     const sprintField = config.jira.sprintField || null;
 
     const client = createJiraClient(config);
-    const fields = ["summary", "description", "parent", "assignee", "issuetype"];
+    const fields = ["summary", "description", "parent", "assignee", "issuetype", "attachment"];
     if (spField) fields.push(spField);
     if (sprintField) fields.push(sprintField);
 
-    let tickets;
+    let issues;
     if (id) {
-        const issue = await client.issues.getIssue({ issueIdOrKey: id, fields });
-        tickets = [toTicket(issue, spField, sprintField)];
+        issues = [await client.issues.getIssue({ issueIdOrKey: id, fields })];
     } else {
-        const issues = [];
+        issues = [];
         let nextPageToken;
         do {
             const result = await client.issueSearch.searchForIssuesUsingJqlEnhancedSearch({
@@ -35,7 +36,13 @@ export async function fetchTickets({ project, id, format, out, config }) {
             issues.push(...(result.issues ?? []));
             nextPageToken = result.nextPageToken ?? undefined;
         } while (nextPageToken);
-        tickets = issues.map((issue) => toTicket(issue, spField, sprintField));
+    }
+    const tickets = issues.map((issue) => toTicket(issue, spField, sprintField));
+
+    const mediaDir = format === "markdown" && !id ? out : dirname(out);
+    await ensureDir(mediaDir);
+    for (let i = 0; i < tickets.length; i++) {
+        await downloadTicketMedia(client, issues[i], tickets[i], mediaDir);
     }
 
     if (format === "markdown") {
@@ -43,7 +50,6 @@ export async function fetchTickets({ project, id, format, out, config }) {
             const { description, ...meta } = tickets[0];
             await write(out, stringify(meta, description));
         } else {
-            await ensureDir(out);
             for (const ticket of tickets) {
                 const { description, ...meta } = ticket;
                 await write(join(out, `${ticket.id}.md`), stringify(meta, description));
@@ -52,6 +58,20 @@ export async function fetchTickets({ project, id, format, out, config }) {
     } else {
         await write(out, serialize({ tickets }));
     }
+}
+
+// Finds this ticket's own media references and downloads/rewrites them in
+// place before the ticket is written. Not unit-tested directly (does
+// HTTP + filesystem I/O) -- same convention as confluence-download's
+// orchestrator functions.
+async function downloadTicketMedia(client, issue, ticket, containingDir) {
+    const mediaIds = findMediaIds(ticket.description);
+    if (!mediaIds.length) {
+        return;
+    }
+    const resolve = await resolveIssueMedia(client, issue);
+    const idToFilename = await downloadMedia({ mediaIds, resolve, containingDir, baseName: ticket.id });
+    ticket.description = rewriteMediaLinks(ticket.description, idToFilename);
 }
 
 // Pure: a Jira issue -> neutral ticket shape. Exported for unit testing.
