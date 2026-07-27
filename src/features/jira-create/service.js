@@ -11,9 +11,9 @@ import { write } from "../../shared/output/file.js";
 // create it, and report the new key. With `update`, write the new key back
 // into the source file and rename it to <KEY>.md.
 export async function createTicket({ file, project, update, config }) {
-    resolveAtlassian(config);
-    const spField = config.jira.storyPointsField || null;
-    const sprintField = config.jira.sprintField || null;
+    const { baseUrl } = resolveAtlassian(config);
+    const spField = config.jira?.storyPointsField || null;
+    const sprintField = config.jira?.sprintField || null;
 
     const content = await readFile(file, "utf8");
     const { data, body } = parse(content);
@@ -22,7 +22,7 @@ export async function createTicket({ file, project, update, config }) {
     const client = createJiraClient(config);
     const created = await client.issues.createIssue({ fields });
 
-    const url = `${config.jira.baseUrl.replace(/\/$/, "")}/browse/${created.key}`;
+    const url = `${baseUrl.replace(/\/$/, "")}/browse/${created.key}`;
     console.log(`Created ${created.key}: ${url}`);
 
     if (update) {

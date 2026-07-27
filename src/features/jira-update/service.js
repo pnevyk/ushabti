@@ -8,9 +8,9 @@ import { parse } from "../../shared/frontmatter.js";
 // Read a markdown file, take the issue key from frontmatter `id`, map the rest
 // of the frontmatter + body to a Jira update payload, and edit the ticket.
 export async function updateTicket({ file, config }) {
-    resolveAtlassian(config);
-    const spField = config.jira.storyPointsField || null;
-    const sprintField = config.jira.sprintField || null;
+    const { baseUrl } = resolveAtlassian(config);
+    const spField = config.jira?.storyPointsField || null;
+    const sprintField = config.jira?.sprintField || null;
 
     const content = await readFile(file, "utf8");
     const { data, body } = parse(content);
@@ -22,7 +22,7 @@ export async function updateTicket({ file, config }) {
     const client = createJiraClient(config);
     await client.issues.editIssue({ issueIdOrKey: String(data.id), fields });
 
-    const url = `${config.jira.baseUrl.replace(/\/$/, "")}/browse/${data.id}`;
+    const url = `${baseUrl.replace(/\/$/, "")}/browse/${data.id}`;
     console.log(`Updated ${data.id}: ${url}`);
 }
 

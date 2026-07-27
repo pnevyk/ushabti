@@ -12,8 +12,8 @@ import { resolveIssueMedia } from "../../shared/jira-media.js";
 // then emit either one JSON file or a directory of per-ticket markdown files.
 export async function fetchTickets({ project, id, format, out, config }) {
     resolveAtlassian(config);
-    const spField = config.jira.storyPointsField || null;
-    const sprintField = config.jira.sprintField || null;
+    const spField = config.jira?.storyPointsField || null;
+    const sprintField = config.jira?.sprintField || null;
 
     const client = createJiraClient(config);
     const fields = ["summary", "description", "parent", "assignee", "issuetype", "attachment"];
