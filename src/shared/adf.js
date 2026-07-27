@@ -176,9 +176,11 @@ function stringifyForComment(value) {
 
 // bodiedExtension has an editable body, so the body renders as ordinary
 // nested markdown between two sentinel comments; only the macro descriptor
-// itself is opaque.
+// itself is opaque. Unlike macroFence's fenced/code-span forms, this comment
+// is plain paragraph text, so it needs the same backslash-doubling as
+// pluginFence -- see stringifyForComment.
 function macroBlock(node, options) {
-    const json = JSON.stringify(node.attrs ?? {});
+    const json = stringifyForComment(node.attrs ?? {});
     const body = renderBlocks(node.content ?? [], options);
     return [`<!-- confluence-macro ${json} -->`, body, "<!-- /confluence-macro -->"].join("\n\n");
 }

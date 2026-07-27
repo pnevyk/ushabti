@@ -306,6 +306,15 @@ test("round-trip: bodiedExtension survives adf conversion with an editable body"
     assert.deepEqual(markdownToAdf(adfToMarkdown(adf)).content, adf.content);
 });
 
+test("round-trip: bodiedExtension attrs with quotes and backslashes survive the sentinel comment", () => {
+    const adf = doc({
+        type: "bodiedExtension",
+        attrs: { extensionKey: "expand", parameters: { title: 'He said "hi"', note: "back\\slash" } },
+        content: [{ type: "paragraph", content: [text("Hidden body")] }],
+    });
+    assert.deepEqual(markdownToAdf(adfToMarkdown(adf)).content, adf.content);
+});
+
 test("adfToMarkdown: media renders as an attachment: image link", () => {
     const adf = doc({
         type: "mediaSingle",
