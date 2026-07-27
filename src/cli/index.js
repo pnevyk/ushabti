@@ -10,6 +10,7 @@ import * as jiraUpdate from "../features/jira-update/command.js";
 import * as jiraFilter from "../features/jira-filter/command.js";
 import * as confluenceDownload from "../features/confluence-download/command.js";
 import * as confluenceCreate from "../features/confluence-create/command.js";
+import * as confluenceUpload from "../features/confluence-upload/command.js";
 
 // Two-level command map: "<group> <subcommand>" -> feature command module.
 const commands = {
@@ -23,6 +24,7 @@ const commands = {
     "jira filter": jiraFilter,
     "confluence download": confluenceDownload,
     "confluence create": confluenceCreate,
+    "confluence upload": confluenceUpload,
 };
 
 export async function run(argv) {

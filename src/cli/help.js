@@ -14,6 +14,7 @@ Commands:
   jira filter            Filter locally fetched tickets by a JS expression
   confluence download    Fetch a Confluence page to JSON or markdown
   confluence create      Create a Confluence page from a markdown file
+  confluence upload      Update a Confluence page from a markdown file
 
 Run \`ushabti <group> <command> --help\` for options and examples.
 
@@ -224,6 +225,24 @@ Options:
   --file <markdown>   Markdown file describing the page (required)
   --update            After creation, write id into frontmatter and rename
                       the file to <id>.md
+  --config <file>     Config file path
+  -h, --help          Show this help`,
+    "confluence upload": `Usage: ushabti confluence upload --file <markdown>
+
+Update an existing Confluence page from a markdown file with YAML frontmatter.
+
+The page id is read from frontmatter \`id\` (as written by \`confluence create
+--update\` or \`confluence download --format markdown\`). title is optional
+(only updated if present); the body always replaces the page content. The
+current page version is fetched automatically to satisfy Confluence's
+optimistic-locking requirement (version.number must increment by exactly 1) --
+no version field is needed in frontmatter.
+
+Examples:
+  ushabti confluence upload --file 12345.md
+
+Options:
+  --file <markdown>   Markdown file describing the update (required)
   --config <file>     Config file path
   -h, --help          Show this help`,
 };
