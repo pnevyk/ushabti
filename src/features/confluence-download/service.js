@@ -9,6 +9,7 @@ import { write, ensureDir } from "../../shared/output/file.js";
 import { nodeBasename, nodeFilename } from "../../shared/confluence-naming.js";
 import { findMediaIds, rewriteMediaLinks, downloadMedia } from "../../shared/media-download.js";
 import { CliError } from "../../shared/errors.js";
+import { plugins } from "../../plugins/index.js";
 
 // Orchestrates: fetch a single Confluence page (as Atlas Document Format),
 // map it to a neutral shape, then emit either a JSON file or a markdown file
@@ -212,7 +213,7 @@ function toDescription(adf) {
     if (content.length === 1 && content[0].type === "codeBlock" && content[0].attrs?.language === "markdown") {
         return (content[0].content ?? []).map((n) => n.text ?? "").join("");
     }
-    return adfToMarkdown(adf);
+    return adfToMarkdown(adf, { plugins });
 }
 
 // Pure: a Confluence Folder -> neutral shape. Folders carry no body/content

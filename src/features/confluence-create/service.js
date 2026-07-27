@@ -7,6 +7,7 @@ import { markdownToAdf } from "../../shared/adf.js";
 import { parse, stringify } from "../../shared/frontmatter.js";
 import { write } from "../../shared/output/file.js";
 import { nodeFilename } from "../../shared/confluence-naming.js";
+import { plugins, resolveDefaults } from "../../plugins/index.js";
 
 // Orchestrates: resolve a space key to its id, read a markdown file, map
 // frontmatter + body to a Confluence page, create it, and report the new
@@ -14,6 +15,7 @@ import { nodeFilename } from "../../shared/confluence-naming.js";
 // rename it to <title>-<id>.md, matching confluence download's naming.
 export async function createPage({ space, file, update, config }) {
     const { baseUrl } = resolveAtlassian(config);
+    const defaults = resolveDefaults(config);
     const client = createConfluenceClient(config);
 
     const spaces = await client.space.getSpaces({ keys: [space] });
@@ -24,7 +26,7 @@ export async function createPage({ space, file, update, config }) {
 
     const content = await readFile(file, "utf8");
     const { data, body } = parse(content);
-    const pageBody = toCreateBody({ data, body, spaceId });
+    const pageBody = toCreateBody({ data, body, spaceId, plugins, defaults });
 
     const created = await client.page.createPage({ body: pageBody });
 
@@ -52,7 +54,7 @@ export function applyCreatedId({ data, body, id }) {
 }
 
 // Pure: frontmatter + body -> Confluence createPage `body` payload. Exported for tests.
-export function toCreateBody({ data, body, spaceId }) {
+export function toCreateBody({ data, body, spaceId, plugins = [], defaults = {} }) {
     if (!data.title) {
         throw new CliError("Frontmatter is missing required `title`");
     }
@@ -61,7 +63,7 @@ export function toCreateBody({ data, body, spaceId }) {
         spaceId,
         status: "current",
         title: data.title,
-        body: { representation: "atlas_doc_format", value: JSON.stringify(markdownToAdf(body)) },
+        body: { representation: "atlas_doc_format", value: JSON.stringify(markdownToAdf(body, { plugins, defaults })) },
     };
     if (data.parentId != null) {
         pageBody.parentId = String(data.parentId);

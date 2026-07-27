@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { toCreateBody, applyCreatedId } from "../src/features/confluence-create/service.js";
 import { parse } from "../src/shared/frontmatter.js";
 import { CliError } from "../src/shared/errors.js";
+import { plugins } from "../src/plugins/index.js";
 
 test("toCreateBody builds required fields with ADF body", () => {
     const pageBody = toCreateBody({ data: { title: "Runbook" }, body: "Hello", spaceId: "999" });
@@ -47,4 +48,17 @@ test("applyCreatedId overrides a pre-existing id", () => {
     const content = applyCreatedId({ data: { id: "999", title: "t" }, body: "", id: "12345" });
     const { data } = parse(content);
     assert.equal(data.id, "12345");
+});
+
+test("toCreateBody threads plugins/defaults through to markdownToAdf", () => {
+    const pageBody = toCreateBody({
+        data: { title: "Runbook" },
+        body: "```mermaid\ngraph TD;\nA-->B;\n```",
+        spaceId: "999",
+        plugins,
+        defaults: { mermaid: "uml" },
+    });
+    const adf = JSON.parse(pageBody.body.value);
+    assert.equal(adf.content[0].attrs.extensionKey, "uml");
+    assert.equal(adf.content[0].attrs.parameters.macroParams.__bodyContent.value, "graph TD;\nA-->B;");
 });

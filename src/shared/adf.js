@@ -1,4 +1,5 @@
 import MarkdownIt from "markdown-it";
+import { CliError } from "./errors.js";
 
 // Partial, two-way conversion between Atlassian Document Format (ADF) and
 // markdown. Covered: paragraphs, headings, bold/italic/code/strikethrough/
@@ -54,21 +55,21 @@ import MarkdownIt from "markdown-it";
 // ADF -> markdown
 // ---------------------------------------------------------------------------
 
-export function adfToMarkdown(adf) {
+export function adfToMarkdown(adf, { plugins = [] } = {}) {
     if (adf == null || !Array.isArray(adf.content)) {
         return "";
     }
-    return renderBlocks(adf.content);
+    return renderBlocks(adf.content, { plugins });
 }
 
-function renderBlocks(nodes) {
+function renderBlocks(nodes, options) {
     return nodes
-        .map(renderBlock)
+        .map((node) => renderBlock(node, options))
         .filter((block) => block !== "")
         .join("\n\n");
 }
 
-function renderBlock(node) {
+function renderBlock(node, options) {
     switch (node.type) {
         case "paragraph":
             return renderInline(node.content);
@@ -82,39 +83,41 @@ function renderBlock(node) {
         case "rule":
             return "---";
         case "blockquote":
-            return prefixLines(renderBlocks(node.content ?? []), "> ");
+            return prefixLines(renderBlocks(node.content ?? [], options), "> ");
         case "panel": {
             const alertType = PANEL_TO_ALERT[node.attrs?.panelType];
-            const body = renderBlocks(node.content ?? []);
+            const body = renderBlocks(node.content ?? [], options);
             const text = alertType ? [`[!${alertType}]`, body].filter(Boolean).join("\n") : body;
             return prefixLines(text, "> ");
         }
         case "bulletList":
-            return renderList(node, "bullet");
+            return renderList(node, "bullet", options);
         case "orderedList":
-            return renderList(node, "ordered");
+            return renderList(node, "ordered", options);
         case "taskList":
-            return renderList(node, "task");
+            return renderList(node, "task", options);
         case "decisionList":
-            return renderList(node, "decision");
+            return renderList(node, "decision", options);
         case "table":
-            return renderTable(node);
+            return renderTable(node, options);
         case "blockCard":
             return cardLink(node, "card-block");
         case "embedCard":
             return cardLink(node, "card-embed");
         case "layoutSection":
-            return renderLayoutSection(node);
+            return renderLayoutSection(node, options);
         case "extension":
-        case "inlineExtension":
-            return macroFence(node);
+        case "inlineExtension": {
+            const plugin = options?.plugins?.find((p) => p.detect(node));
+            return plugin ? pluginFence(plugin, node) : macroFence(node);
+        }
         case "bodiedExtension":
-            return macroBlock(node);
+            return macroBlock(node, options);
         case "mediaSingle":
             return mediaLink(node);
         case "expand":
         case "nestedExpand":
-            return renderExpand(node);
+            return renderExpand(node, options);
         default:
             return renderInline(node.content ?? []);
     }
@@ -137,8 +140,8 @@ function cardLink(node, kind) {
 // blocks are wrapped in HTML-comment sentinels. Column width ratios (attrs on
 // layoutColumn) aren't representable and are lost -- markdownToAdf splits
 // width evenly across however many columns come back.
-function renderLayoutSection(node) {
-    const columns = (node.content ?? []).map((col) => renderBlocks(col.content ?? []));
+function renderLayoutSection(node, options) {
+    const columns = (node.content ?? []).map((col) => renderBlocks(col.content ?? [], options));
     return ["<!-- layout -->", columns.join("\n\n<!-- layout-column -->\n\n"), "<!-- /layout -->"].join("\n\n");
 }
 
@@ -151,12 +154,32 @@ function macroFence(node) {
     return node.type === "inlineExtension" ? `\`[confluence-macro:${json}]\`` : `\`\`\`confluence-macro\n${json}\n\`\`\``;
 }
 
+// A macro claimed by a plugin renders as a real fenced block in the plugin's
+// target language, with its raw ADF attrs stashed in a details comment above
+// so encoding can round-trip them (and know which plugin produced it -- see
+// the header comment and the plugin module docs for the full round-trip).
+function pluginFence(plugin, node) {
+    const { source, details } = plugin.decode(node);
+    const comment = `<!-- confluence-plugin ${stringifyForComment({ plugin: plugin.id, ...details })} -->`;
+    return `${comment}\n\`\`\`${plugin.target}\n${source}\n\`\`\``;
+}
+
+// A details comment is plain paragraph text, not a code span, so CommonMark's
+// backslash-escape rule (\" -> ", \\ -> \) would otherwise corrupt any nested
+// JSON string that itself needed escaping (e.g. the mermaid plugin's
+// JSON-wrapped diagram source). Doubling every backslash pre-compensates:
+// markdown-it undoes exactly one layer of backslash-escaping when it parses
+// this back into plain text, recovering the original JSON untouched.
+function stringifyForComment(value) {
+    return JSON.stringify(value).replace(/\\/g, "\\\\");
+}
+
 // bodiedExtension has an editable body, so the body renders as ordinary
 // nested markdown between two sentinel comments; only the macro descriptor
 // itself is opaque.
-function macroBlock(node) {
+function macroBlock(node, options) {
     const json = JSON.stringify(node.attrs ?? {});
-    const body = renderBlocks(node.content ?? []);
+    const body = renderBlocks(node.content ?? [], options);
     return [`<!-- confluence-macro ${json} -->`, body, "<!-- /confluence-macro -->"].join("\n\n");
 }
 
@@ -176,13 +199,13 @@ function mediaLink(node) {
 // expand/nestedExpand render identically as a GitHub collapsible section;
 // nestedExpand's table-cell-only placement isn't distinguishable on the way
 // back in (see the header comment).
-function renderExpand(node) {
+function renderExpand(node, options) {
     const title = node.attrs?.title ?? "";
-    const body = renderBlocks(node.content ?? []);
+    const body = renderBlocks(node.content ?? [], options);
     return ["<details>", `<summary>${title}</summary>`, body, "</details>"].join("\n\n");
 }
 
-function renderList(node, kind) {
+function renderList(node, kind, options) {
     // taskItem/decisionItem hold inline content directly (no paragraph
     // wrapper), unlike listItem which holds blocks.
     const isFlat = kind === "task" || kind === "decision";
@@ -193,7 +216,7 @@ function renderList(node, kind) {
                 ? renderInline(item.content)
                 : // Join an item's blocks tightly so a paragraph and its sub-list
                   // stay on adjacent lines rather than separated by a blank line.
-                  (item.content ?? []).map(renderBlock).join("\n");
+                  (item.content ?? []).map((n) => renderBlock(n, options)).join("\n");
             return marker + indentContinuation(inner, marker.length);
         })
         .join("\n");
@@ -213,20 +236,20 @@ function listMarker(kind, item) {
 // Render an ADF table as a GFM pipe table. The first row is treated as the
 // header (GFM requires one). Cell block content is flattened to a single line
 // since GFM cells cannot hold block structure.
-function renderTable(node) {
+function renderTable(node, options) {
     const rows = node.content ?? [];
     if (!rows.length) {
         return "";
     }
-    const renderRow = (row) => `| ${(row.content ?? []).map(renderCell).join(" | ")} |`;
+    const renderRow = (row) => `| ${(row.content ?? []).map((cell) => renderCell(cell, options)).join(" | ")} |`;
     const columns = (rows[0].content ?? []).length;
     const separator = `| ${Array(columns).fill("---").join(" | ")} |`;
     const body = rows.slice(1).map(renderRow);
     return [renderRow(rows[0]), separator, ...body].join("\n");
 }
 
-function renderCell(cell) {
-    return renderBlocks(cell.content ?? [])
+function renderCell(cell, options) {
+    return renderBlocks(cell.content ?? [], options)
         .replace(/\s*\n+\s*/g, " ")
         .replace(/\|/g, "\\|")
         .trim();
@@ -317,11 +340,14 @@ const PANEL_TO_ALERT = Object.fromEntries(Object.entries(ALERT_TO_PANEL).map(([k
 const CHECKBOX_MARKER = /^\[([ xX])\]\s?/;
 const DECISION_MARKER = /^\[decision\]\s?/;
 
-export function markdownToAdf(source) {
+export function markdownToAdf(source, { plugins = [], defaults = {} } = {}) {
     const tokens = md.parse(source ?? "", {});
     const doc = { type: "doc", content: [] };
     const stack = [doc];
     const top = () => stack[stack.length - 1];
+    // Set by a `<!-- confluence-plugin {...} -->` sentinel immediately above a
+    // fence; consumed (and cleared) by the very next fence/code_block token.
+    const pluginState = { pending: null };
 
     for (const token of tokens) {
         switch (token.type) {
@@ -382,6 +408,20 @@ export function markdownToAdf(source) {
             case "fence":
             case "code_block": {
                 const info = token.info?.trim() ?? "";
+                const targetPlugin = plugins.find((p) => p.target === info);
+                if (targetPlugin) {
+                    const pending = pluginState.pending;
+                    pluginState.pending = null;
+                    const id = pending?.plugin ?? defaults[info];
+                    if (!id) {
+                        throw new CliError(`No default confluence.plugins entry for target "${info}"`);
+                    }
+                    const plugin = plugins.find((p) => p.id === id);
+                    const { plugin: _pluginId, ...details } = pending ?? {};
+                    const attrs = plugin.encode(token.content.replace(/\n$/, ""), pending ? details : null);
+                    top().content.push({ type: "extension", attrs });
+                    break;
+                }
                 if (info === "confluence-macro") {
                     top().content.push({ type: "extension", attrs: parseJson(token.content.replace(/\n$/, "")) });
                     break;
@@ -424,7 +464,7 @@ export function markdownToAdf(source) {
                 }
 
                 const soleText = nodes.length === 1 && nodes[0].type === "text" && !nodes[0].marks ? nodes[0].text : null;
-                if (soleText != null && handleSentinelParagraph(soleText, stack)) {
+                if (soleText != null && handleSentinelParagraph(soleText, stack, pluginState)) {
                     break;
                 }
 
@@ -445,7 +485,7 @@ export function markdownToAdf(source) {
 // wrapper markers -- see the header comment) and perform the corresponding
 // stack surgery instead of emitting it as a normal paragraph. Returns true
 // when the paragraph was consumed as a sentinel.
-function handleSentinelParagraph(text, stack) {
+function handleSentinelParagraph(text, stack, pluginState) {
     if (text === "<details>") {
         discardParagraph(stack);
         push(stack, { type: "expand", attrs: { title: "" }, content: [] });
@@ -488,6 +528,13 @@ function handleSentinelParagraph(text, stack) {
         for (const column of section.content) {
             column.attrs.width = width;
         }
+        stack.push({ type: "sentinel" });
+        return true;
+    }
+    const pluginOpen = text.match(/^<!-- confluence-plugin (.+) -->$/);
+    if (pluginOpen) {
+        discardParagraph(stack);
+        pluginState.pending = parseJson(pluginOpen[1]);
         stack.push({ type: "sentinel" });
         return true;
     }

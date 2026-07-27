@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { adfToMarkdown, markdownToAdf } from "../src/shared/adf.js";
+import { mermaidPlugin } from "../src/plugins/mermaid.js";
+import { umlPlugin } from "../src/plugins/uml.js";
+import { CliError } from "../src/shared/errors.js";
 
 const doc = (...content) => ({ version: 1, type: "doc", content });
 const text = (t, marks) => (marks ? { type: "text", text: t, marks } : { type: "text", text: t });
@@ -492,4 +495,77 @@ test("round-trip: expand survives adf conversion alongside surrounding content",
         { type: "paragraph", content: [text("After.")] },
     );
     assert.deepEqual(markdownToAdf(adfToMarkdown(adf)).content, adf.content);
+});
+
+const PLUGINS = [mermaidPlugin, umlPlugin];
+
+const MERMAID_ATTRS = {
+    extensionKey: "mermaid",
+    extensionType: "com.atlassian.confluence.macro.core",
+    layout: "default",
+    localId: "local-1",
+    parameters: {
+        macroParams: {
+            fileName: "mermaid_1700000000000",
+            theme: "default",
+            version: "2",
+            __bodyContent: { value: JSON.stringify({ diagramDefinition: "graph TD;\nA-->B;" }) },
+        },
+        macroMetadata: { macroId: "meta-1" },
+    },
+    schemaVersion: "1",
+    title: "Mermaid Integration for Confluence",
+};
+
+test("adfToMarkdown: a macro claimed by a plugin renders as a real fence with a details comment", () => {
+    const adf = doc({ type: "extension", attrs: MERMAID_ATTRS });
+    const markdown = adfToMarkdown(adf, { plugins: PLUGINS });
+    assert.match(markdown, /^<!-- confluence-plugin \{"plugin":"mermaid",.*\} -->\n```mermaid\ngraph TD;\nA-->B;\n```$/);
+});
+
+test("adfToMarkdown: an extension not claimed by any plugin still falls back to the generic macro fence", () => {
+    const adf = doc({ type: "extension", attrs: { extensionKey: "toc", parameters: {} } });
+    assert.equal(adfToMarkdown(adf, { plugins: PLUGINS }), '```confluence-macro\n{"extensionKey":"toc","parameters":{}}\n```');
+});
+
+test("markdownToAdf: a fence with a plugin details comment reconstructs the exact extension node", () => {
+    const adf = doc({ type: "extension", attrs: MERMAID_ATTRS });
+    const markdown = adfToMarkdown(adf, { plugins: PLUGINS });
+    const back = markdownToAdf(markdown, { plugins: PLUGINS });
+    assert.deepEqual(back.content, adf.content);
+});
+
+test("round-trip: mermaid and uml plugin macros survive adf conversion side by side", () => {
+    const umlAttrs = {
+        extensionKey: "uml",
+        extensionType: "com.atlassian.confluence.macro.core",
+        layout: "default",
+        localId: "local-2",
+        parameters: {
+            macroParams: { __bodyContent: { value: "@startuml\nA -> B\n@enduml" } },
+            macroMetadata: { macroId: "meta-2" },
+        },
+        schemaVersion: "1",
+        title: "Mermaid UML Diagram",
+    };
+    const adf = doc({ type: "extension", attrs: MERMAID_ATTRS }, { type: "extension", attrs: umlAttrs });
+    const markdown = adfToMarkdown(adf, { plugins: PLUGINS });
+    assert.deepEqual(markdownToAdf(markdown, { plugins: PLUGINS }).content, adf.content);
+});
+
+test("markdownToAdf: a fresh fence with no details comment uses the configured default plugin", () => {
+    const adf = markdownToAdf("```mermaid\ngraph TD;\nA-->B;\n```", { plugins: PLUGINS, defaults: { mermaid: "uml" } });
+    assert.equal(adf.content[0].attrs.extensionKey, "uml");
+    assert.equal(adf.content[0].attrs.parameters.macroParams.__bodyContent.value, "graph TD;\nA-->B;");
+});
+
+test("markdownToAdf: a fresh fence with no comment and no configured default throws", () => {
+    assert.throws(() => markdownToAdf("```mermaid\ngraph TD;\nA-->B;\n```", { plugins: PLUGINS }), CliError);
+});
+
+test("markdownToAdf: a details comment's plugin id overrides the configured default", () => {
+    const details = { plugin: "uml", extensionKey: "uml", parameters: { macroParams: { __bodyContent: { value: "old" } }, macroMetadata: {} } };
+    const markdown = `<!-- confluence-plugin ${JSON.stringify(details)} -->\n\`\`\`mermaid\ngraph TD;\nA-->B;\n\`\`\``;
+    const adf = markdownToAdf(markdown, { plugins: PLUGINS, defaults: { mermaid: "mermaid" } });
+    assert.equal(adf.content[0].attrs.extensionKey, "uml");
 });

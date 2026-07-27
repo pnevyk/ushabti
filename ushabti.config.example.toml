@@ -12,3 +12,9 @@ token = ""
 storyPointsField = ""
 # Custom field id for sprint, e.g. "customfield_10020". Optional.
 sprintField = ""
+
+[confluence.plugins]
+# Default producer for mermaid diagrams, keyed by fence language. Only needed
+# when a fresh (hand-authored) fence has no plugin details comment yet.
+# mermaid = "mermaid"  # Mermaid Integration for Confluence
+# mermaid = "uml"      # Mermaid UML Diagram

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { toUpdateBody } from "../src/features/confluence-upload/service.js";
+import { plugins } from "../src/plugins/index.js";
 
 test("toUpdateBody keeps the current title when frontmatter omits it, increments the version", () => {
     const pageBody = toUpdateBody({
@@ -43,4 +44,17 @@ test("toUpdateBody omits parentId when frontmatter doesn't provide it", () => {
         current: { title: "Runbook", version: { number: 1 } },
     });
     assert.equal("parentId" in pageBody, false);
+});
+
+test("toUpdateBody threads plugins/defaults through to markdownToAdf", () => {
+    const pageBody = toUpdateBody({
+        data: { id: "12345" },
+        body: "```mermaid\ngraph TD;\nA-->B;\n```",
+        current: { title: "Runbook", version: { number: 1 } },
+        plugins,
+        defaults: { mermaid: "uml" },
+    });
+    const adf = JSON.parse(pageBody.body.value);
+    assert.equal(adf.content[0].attrs.extensionKey, "uml");
+    assert.equal(adf.content[0].attrs.parameters.macroParams.__bodyContent.value, "graph TD;\nA-->B;");
 });
