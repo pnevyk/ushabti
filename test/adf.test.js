@@ -532,6 +532,14 @@ test("adfToMarkdown: a macro claimed by a plugin renders as a real fence with a 
     assert.match(markdown, /^<!-- confluence-plugin \{"plugin":"mermaid",.*\} -->\n```mermaid\ngraph TD;\nA-->B;\n```$/);
 });
 
+test("adfToMarkdown: the details comment doesn't duplicate the diagram source already in the fence", () => {
+    const adf = doc({ type: "extension", attrs: MERMAID_ATTRS });
+    const markdown = adfToMarkdown(adf, { plugins: PLUGINS });
+    const [comment] = markdown.split("\n");
+    assert.ok(!comment.includes("diagramDefinition"));
+    assert.ok(!comment.includes("graph TD"));
+});
+
 test("adfToMarkdown: an extension not claimed by any plugin still falls back to the generic macro fence", () => {
     const adf = doc({ type: "extension", attrs: { extensionKey: "toc", parameters: {} } });
     assert.equal(adfToMarkdown(adf, { plugins: PLUGINS }), '```confluence-macro\n{"extensionKey":"toc","parameters":{}}\n```');

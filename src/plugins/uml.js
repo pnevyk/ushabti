@@ -9,12 +9,14 @@ export const umlPlugin = {
         return node.attrs?.extensionKey === "uml";
     },
     decode(node) {
-        return { source: node.attrs.parameters.macroParams.__bodyContent.value, details: node.attrs };
+        const details = structuredClone(node.attrs);
+        delete details.parameters.macroParams.__bodyContent;
+        return { source: node.attrs.parameters.macroParams.__bodyContent.value, details };
     },
     encode(source, details) {
         if (details) {
             const attrs = structuredClone(details);
-            attrs.parameters.macroParams.__bodyContent.value = source;
+            attrs.parameters.macroParams.__bodyContent = { value: source };
             return attrs;
         }
         return {

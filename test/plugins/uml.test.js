@@ -24,7 +24,9 @@ test("umlPlugin.detect matches nodes with extensionKey uml", () => {
 test("umlPlugin.decode reads the raw diagram source", () => {
     const { source, details } = umlPlugin.decode({ attrs });
     assert.equal(source, "@startuml\nA -> B\n@enduml");
-    assert.equal(details, attrs);
+    assert.notEqual(details, attrs); // cloned, not the original attrs
+    assert.equal(details.parameters.macroParams.__bodyContent, undefined); // duplicates the fence, dropped
+    assert.equal(details.parameters.macroMetadata.macroId, "meta-2");
 });
 
 test("umlPlugin.encode with details splices the new source back in, preserving everything else", () => {

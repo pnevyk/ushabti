@@ -11,12 +11,14 @@ export const mermaidPlugin = {
     },
     decode(node) {
         const parsed = JSON.parse(node.attrs.parameters.macroParams.__bodyContent.value);
-        return { source: parsed.diagramDefinition, details: node.attrs };
+        const details = structuredClone(node.attrs);
+        delete details.parameters.macroParams.__bodyContent;
+        return { source: parsed.diagramDefinition, details };
     },
     encode(source, details) {
         if (details) {
             const attrs = structuredClone(details);
-            attrs.parameters.macroParams.__bodyContent.value = JSON.stringify({ diagramDefinition: source });
+            attrs.parameters.macroParams.__bodyContent = { value: JSON.stringify({ diagramDefinition: source }) };
             return attrs;
         }
         return {

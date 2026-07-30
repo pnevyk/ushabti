@@ -156,4 +156,4 @@ sequenceDiagram
 ```
 ````
 
-The comment's `plugin` field records exactly which macro produced this fence, so editing the diagram source and uploading round-trips through the *same* macro every time — it never silently swaps implementations. Everything else in that comment is the macro's original attrs, preserved verbatim (theme, macro id, etc.) and spliced back in around your edited diagram source.
+The comment's `plugin` field records exactly which macro produced this fence, so editing the diagram source and uploading round-trips through the *same* macro every time — it never silently swaps implementations. Everything else in that comment is the macro's original attrs (theme, macro id, etc.), preserved verbatim except for the body content itself: that would just duplicate the diagram source already sitting in the fence, so it's dropped from the comment and rebuilt from the fence's (possibly-edited) content on upload.

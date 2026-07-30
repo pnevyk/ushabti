@@ -29,7 +29,10 @@ test("mermaidPlugin.detect matches nodes with extensionKey mermaid", () => {
 test("mermaidPlugin.decode unwraps the JSON-wrapped diagram source", () => {
     const { source, details } = mermaidPlugin.decode({ attrs });
     assert.equal(source, "graph TD;\nA-->B;");
-    assert.equal(details, attrs);
+    assert.notEqual(details, attrs); // cloned, not the original attrs
+    assert.equal(details.parameters.macroParams.__bodyContent, undefined); // duplicates the fence, dropped
+    assert.equal(details.parameters.macroParams.fileName, "mermaid_1700000000000");
+    assert.equal(details.parameters.macroMetadata.macroId, "meta-1");
 });
 
 test("mermaidPlugin.encode with details splices the new source back in, preserving everything else", () => {
