@@ -29,3 +29,7 @@ test("jira template is wired up", async () => {
 test("config template is wired up", async () => {
     await run(["config", "template", "--help"]);
 });
+
+test("ui estimate is wired up", async () => {
+    await run(["ui", "estimate", "--help"]);
+});

@@ -18,6 +18,7 @@ Commands:
   confluence create      Create a Confluence page from a markdown file
   confluence upload      Update a Confluence page from a markdown file
   confluence template    Print an example page markdown file
+  ui estimate            Serve the local task estimation UI
 
 Run \`ushabti <group> <command> --help\` for options and examples.
 
@@ -291,6 +292,22 @@ fields present but commented out. Redirect to a file to start a new page:
 
 Options:
   -h, --help    Show this help`,
+    "ui estimate": `Usage: ushabti ui estimate [--browser | --no-browser]
+
+Serve the quantified task estimation UI (distance + friction x relativity)
+on a local HTTP server and print its URL. Runs until stopped (Ctrl+C).
+
+Examples:
+  ushabti ui estimate
+  ushabti ui estimate --browser
+
+Options:
+  --browser         Open the UI in your default browser (default: config
+                    ui.openBrowser, else off)
+  --no-browser      Never open the browser, even if config ui.openBrowser
+                    is true
+  --config <file>   Config file path
+  -h, --help        Show this help`,
 };
 
 export function printCommandHelp(key) {

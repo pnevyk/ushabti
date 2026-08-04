@@ -18,3 +18,9 @@ sprintField = ""
 # when a fresh (hand-authored) fence has no plugin details comment yet.
 # mermaid = "mermaid"  # Mermaid Integration for Confluence
 # mermaid = "uml"      # Mermaid UML Diagram
+
+[ui]
+# Automatically open the local browser UI when running a `ui` command (e.g.
+# `ui estimate`). Overridden by --browser / --no-browser on the command.
+# Optional, default: false.
+# openBrowser = false

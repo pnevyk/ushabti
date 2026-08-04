@@ -14,6 +14,7 @@ import * as confluenceDownload from "../features/confluence-download/command.js"
 import * as confluenceCreate from "../features/confluence-create/command.js";
 import * as confluenceUpload from "../features/confluence-upload/command.js";
 import * as confluenceTemplate from "../features/confluence-template/command.js";
+import * as uiEstimate from "../features/ui-estimate/command.js";
 
 // Two-level command map: "<group> <subcommand>" -> feature command module.
 const commands = {
@@ -31,6 +32,7 @@ const commands = {
     "confluence create": confluenceCreate,
     "confluence upload": confluenceUpload,
     "confluence template": confluenceTemplate,
+    "ui estimate": uiEstimate,
 };
 
 export async function run(argv) {
