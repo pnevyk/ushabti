@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { requireKeys, resolveAtlassian, mergeConfig } from "../src/shared/config.js";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { requireKeys, resolveAtlassian, mergeConfig, loadOptionalConfig } from "../src/shared/config.js";
 import { CliError } from "../src/shared/errors.js";
 
 const config = { github: { token: "t" }, jira: { baseUrl: "u", email: "", token: "a" } };
@@ -73,4 +76,19 @@ test("mergeConfig keeps base-only and override-only sections", () => {
 test("mergeConfig with an empty override returns the base's values", () => {
     const merged = mergeConfig({ github: { token: "g" } }, {});
     assert.deepEqual(merged, { github: { token: "g" } });
+});
+
+test("loadOptionalConfig parses an explicit config path", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "ushabti-"));
+    try {
+        const file = join(dir, "config.toml");
+        await writeFile(file, '[ui]\nopenBrowser = true\n');
+        assert.deepEqual(loadOptionalConfig(file), { ui: { openBrowser: true } });
+    } finally {
+        await rm(dir, { recursive: true, force: true });
+    }
+});
+
+test("loadOptionalConfig still throws when an explicit config path doesn't exist", () => {
+    assert.throws(() => loadOptionalConfig(join(tmpdir(), "ushabti-missing-config-xyz.toml")), CliError);
 });

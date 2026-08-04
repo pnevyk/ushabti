@@ -12,18 +12,32 @@ const GLOBAL_PATH = join(homedir(), ".config", "ushabti", "config.toml");
 // a project-local file only needs to state what it overrides -- either may
 // be absent, but at least one must exist.
 export function loadConfig(path) {
-    if (path) {
-        const config = tryParse(path);
-        if (!config) {
-            throw new CliError(`Config file not found: ${path}`);
-        }
-        return config;
+    const config = tryLoadMerged(path);
+    if (!config) {
+        throw new CliError(`Config file not found: ${path ?? `${LOCAL_PATH}, ${GLOBAL_PATH}`}`);
     }
+    return config;
+}
 
+// Like loadConfig, but returns {} instead of throwing when no config file
+// exists at all -- for commands with no required credentials (e.g. `ui`
+// commands), which shouldn't hard-fail just because no config was set up.
+// An explicit --config path that doesn't exist still throws either way.
+export function loadOptionalConfig(path) {
+    if (path) {
+        return loadConfig(path);
+    }
+    return tryLoadMerged(path) ?? {};
+}
+
+function tryLoadMerged(path) {
+    if (path) {
+        return tryParse(path);
+    }
     const local = tryParse(LOCAL_PATH);
     const global = tryParse(GLOBAL_PATH);
     if (!local && !global) {
-        throw new CliError(`Config file not found: ${LOCAL_PATH}, ${GLOBAL_PATH}`);
+        return null;
     }
     return mergeConfig(global ?? {}, local ?? {});
 }
