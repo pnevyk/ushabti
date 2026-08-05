@@ -1,6 +1,9 @@
 import { printHelp, printCommandHelp } from "./help.js";
 import { CliError } from "../shared/errors.js";
 import * as configTemplate from "../features/config-template/command.js";
+import * as secretsSet from "../features/secrets-set/command.js";
+import * as secretsDelete from "../features/secrets-delete/command.js";
+import * as secretsList from "../features/secrets-list/command.js";
 import * as prComments from "../features/pr-comments/command.js";
 import * as prDigest from "../features/pr-digest/command.js";
 import * as jiraFetch from "../features/jira-fetch/command.js";
@@ -19,6 +22,9 @@ import * as uiEstimate from "../features/ui-estimate/command.js";
 // Two-level command map: "<group> <subcommand>" -> feature command module.
 const commands = {
     "config template": configTemplate,
+    "secrets set": secretsSet,
+    "secrets delete": secretsDelete,
+    "secrets list": secretsList,
     "pr comments": prComments,
     "pr digest": prDigest,
     "jira fetch": jiraFetch,

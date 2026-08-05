@@ -5,6 +5,9 @@ Usage: ushabti <group> <command> [options]
 
 Commands:
   config template        Print an example config file
+  secrets set            Store a token in the OS keychain
+  secrets delete         Remove a stored token
+  secrets list           List stored tokens and clean up broken scopes
   pr comments            Fetch unresolved PR review threads to JSON
   pr digest              Fetch merged-PR history in a date window to JSON
   jira fetch             Fetch a project's tickets to JSON or markdown
@@ -36,6 +39,42 @@ const COMMAND_HELP = {
 Print the example config file (ushabti.config.example.toml), with every field
 present but blank or commented out. Redirect to a file to start a new config:
 \`ushabti config template > ushabti.config.toml\`.
+
+Options:
+  -h, --help    Show this help`,
+    "secrets set": `Usage: ushabti secrets set <github|atlassian> [--local]
+
+Store a token in the OS keychain, falling back to a dedicated secrets file
+(ushabti.secrets.toml) if no keychain is available. Reads the value from
+stdin if piped, otherwise prompts for it (hidden, nothing echoed).
+
+--local scopes the token to the current directory (and its subdirectories);
+without it, the token is available everywhere.
+
+Examples:
+  ushabti secrets set github
+  echo -n "$TOKEN" | ushabti secrets set atlassian --local
+
+Options:
+  --local       Scope to the current directory instead of storing globally
+  -h, --help    Show this help`,
+    "secrets delete": `Usage: ushabti secrets delete <github|atlassian> [--local]
+
+Remove a token from wherever it's stored (OS keychain and/or secrets file) at
+the given scope. Reports "not found" if there was nothing to remove.
+
+Examples:
+  ushabti secrets delete github
+  ushabti secrets delete atlassian --local
+
+Options:
+  --local       Operate on the current directory's scope instead of global
+  -h, --help    Show this help`,
+    "secrets list": `Usage: ushabti secrets list
+
+List every stored token with its scope (global or a directory). Registered
+directory scopes whose directory no longer exists are flagged; run
+interactively to be prompted to delete each broken scope's secrets.
 
 Options:
   -h, --help    Show this help`,
