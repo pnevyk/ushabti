@@ -1,5 +1,5 @@
 import { createV2Client } from "confluence.js";
-import { resolveAtlassian } from "./config.js";
+import { resolveAtlassian } from "./secrets.js";
 
 export function createConfluenceClient(config) {
     const { baseUrl, email, token } = resolveAtlassian(config);

@@ -1,5 +1,5 @@
 import { Version3Client, AgileClient } from "jira.js";
-import { resolveAtlassian } from "./config.js";
+import { resolveAtlassian } from "./secrets.js";
 
 function auth(config) {
     const { baseUrl, email, token } = resolveAtlassian(config);

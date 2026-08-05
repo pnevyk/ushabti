@@ -1,11 +1,11 @@
 [github]
-token = ""
+# Use `ushabti secrets set github` for setting your GitHub token.
 
 # Shared Atlassian Cloud credentials, used by both jira and confluence commands.
 [atlassian]
 baseUrl = ""
 email = ""
-token = ""
+# Use `ushabti secrets set atlassian` for setting your Atlassian token.
 
 [jira]
 # Custom field id for story points, e.g. "customfield_10026". Optional.

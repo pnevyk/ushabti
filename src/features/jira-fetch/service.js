@@ -1,5 +1,5 @@
 import { dirname, join } from "node:path";
-import { resolveAtlassian } from "../../shared/config.js";
+import { resolveAtlassian } from "../../shared/secrets.js";
 import { createJiraClient } from "../../shared/jira-client.js";
 import { adfToMarkdown } from "../../shared/adf.js";
 import { serialize } from "../../shared/output/json.js";

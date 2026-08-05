@@ -1,2 +1,3 @@
 node_modules/
 ushabti.config.toml
+ushabti.secrets.toml

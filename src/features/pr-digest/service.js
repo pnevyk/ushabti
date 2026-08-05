@@ -1,4 +1,3 @@
-import { requireKeys } from "../../shared/config.js";
 import { CliError } from "../../shared/errors.js";
 import { createGithubClient } from "../../shared/github-client.js";
 import { currentRepo } from "../../shared/git.js";
@@ -8,8 +7,6 @@ import { write } from "../../shared/output/file.js";
 // Orchestrates: search merged PRs in [since, until], fetch each PR's reviews,
 // inline review comments and conversation comments, serialize, write to `out`.
 export async function fetchDigest({ since, until, repo, out, config }) {
-    requireKeys(config, ["github.token"]);
-
     if (repo == null) {
         try {
             repo = currentRepo();

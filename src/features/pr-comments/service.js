@@ -1,4 +1,3 @@
-import { requireKeys } from "../../shared/config.js";
 import { CliError } from "../../shared/errors.js";
 import { createGithubClient } from "../../shared/github-client.js";
 import { currentRepo, currentBranch } from "../../shared/git.js";
@@ -35,8 +34,6 @@ query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
 // Orchestrates: fetch all PR review threads via GitHub GraphQL (paginated),
 // keep unresolved (or all when `all`), serialize, write to `out`.
 export async function fetchComments({ repo, pr, out, all, config }) {
-    requireKeys(config, ["github.token"]);
-
     if (repo == null) {
         try {
             repo = currentRepo();

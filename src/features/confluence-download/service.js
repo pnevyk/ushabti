@@ -1,6 +1,6 @@
 import { dirname, join } from "node:path";
 import { isNotFoundError } from "confluence.js";
-import { resolveAtlassian } from "../../shared/config.js";
+import { resolveAtlassian } from "../../shared/secrets.js";
 import { createConfluenceClient } from "../../shared/confluence-client.js";
 import { adfToMarkdown } from "../../shared/adf.js";
 import { serialize } from "../../shared/output/json.js";

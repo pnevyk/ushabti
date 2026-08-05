@@ -1,6 +1,6 @@
 import { readFile, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { resolveAtlassian } from "../../shared/config.js";
+import { resolveAtlassian } from "../../shared/secrets.js";
 import { CliError } from "../../shared/errors.js";
 import { createConfluenceClient } from "../../shared/confluence-client.js";
 import { markdownToAdf } from "../../shared/adf.js";

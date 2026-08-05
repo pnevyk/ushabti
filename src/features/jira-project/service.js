@@ -1,5 +1,5 @@
 import { stringify as stringifyYaml } from "yaml";
-import { resolveAtlassian } from "../../shared/config.js";
+import { resolveAtlassian } from "../../shared/secrets.js";
 import { createJiraClient, createJiraAgileClient } from "../../shared/jira-client.js";
 import { write } from "../../shared/output/file.js";
 

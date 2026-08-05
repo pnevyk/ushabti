@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { resolveAtlassian } from "../../shared/config.js";
+import { resolveAtlassian } from "../../shared/secrets.js";
 import { CliError } from "../../shared/errors.js";
 import { createJiraClient } from "../../shared/jira-client.js";
 import { markdownToAdf } from "../../shared/adf.js";
