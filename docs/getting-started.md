@@ -48,32 +48,37 @@ mkdir -p ~/.config/ushabti
 ushabti config template > ~/.config/ushabti/config.toml
 ```
 
-Put your durable, everywhere defaults (GitHub token, Atlassian credentials) in the global file. If one project needs its own credentials or Jira custom fields, run `ushabti config template > ushabti.config.toml` inside that project instead, and fill in only the fields that need to differ there.
+Put your durable, everywhere defaults (Atlassian base URL and email, Jira custom fields) in the global file. If one project needs its own settings, run `ushabti config template > ushabti.config.toml` inside that project instead, and fill in only the fields that need to differ there. Tokens don't go in this file at all — see below.
 
 ## Configure GitHub access
 
 `pr comments` and `pr digest` need a GitHub token with read access to the repositories you'll run them against.
 
 1. Create a token at [github.com/settings/tokens](https://github.com/settings/tokens) — a fine-grained token scoped to just the repositories you need, with read-only "Pull requests" access, is enough.
-2. Fill it in:
+2. Store it:
 
-   ```toml
-   [github]
-   token = "ghp_..."
+   ```sh
+   ushabti secrets set github
    ```
+
+   This prompts for the token (input is hidden) and stores it in your OS keychain, falling back to a dedicated secrets file if no keychain is available. See [Secrets](reference/configuration.md#secrets-tokens) in the configuration reference for how storage and scoping work.
 
 ## Configure Atlassian access
 
 `jira` and `confluence` commands share one set of Atlassian Cloud credentials.
 
 1. Create an API token at [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens).
-2. Fill in your site's base URL, the email address tied to the token, and the token itself:
+2. Fill in your site's base URL and the email address tied to the token — these aren't secrets, so they live in the config file:
 
    ```toml
    [atlassian]
    baseUrl = "https://your-site.atlassian.net"
    email = "you@example.com"
-   token = "..."
+   ```
+3. Store the token itself:
+
+   ```sh
+   ushabti secrets set atlassian
    ```
 
 If your Jira project tracks story points or sprints in custom fields and you plan to read or write them through ushabti, also fill in `[jira] storyPointsField` / `sprintField` — see the [configuration reference](reference/configuration.md) for how to find their field ids.
