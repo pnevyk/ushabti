@@ -97,7 +97,7 @@ With `[atlassian]` configured:
 ushabti jira project --project ABC
 ```
 
-Each should produce a local JSON or YAML file. If a command instead fails with `Missing config keys: ...`, double check the section it names in your config file.
+Each should produce a local JSON or YAML file. If a command instead fails saying the configuration is missing something, double check the section it names in your config file. Any other failure — an invalid token, no network, GitHub/Jira/Confluence being unreachable — prints a short explanation of what went wrong and how to fix it, plus the path to a log file with the full technical detail.
 
 ## Next steps
 
