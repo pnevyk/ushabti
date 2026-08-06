@@ -1,5 +1,5 @@
 import { printHelp, printCommandHelp } from "./help.js";
-import { CliError } from "../shared/errors.js";
+import { InvalidCliInputError } from "../shared/errors.js";
 import * as configTemplate from "../features/config-template/command.js";
 import * as secretsSet from "../features/secrets-set/command.js";
 import * as secretsDelete from "../features/secrets-delete/command.js";
@@ -51,7 +51,7 @@ export async function run(argv) {
     const key = `${group} ${sub}`;
     const command = commands[key];
     if (!command) {
-        throw new CliError(`Unknown command: ${[group, sub].filter(Boolean).join(" ")}`);
+        throw new InvalidCliInputError(`Unknown command: ${[group, sub].filter(Boolean).join(" ")}. Run \`ushabti --help\` to see available commands.`);
     }
 
     if (rest.includes("-h") || rest.includes("--help")) {

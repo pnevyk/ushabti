@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
-import { CliError } from "../../shared/errors.js";
+import { InvalidCliInputError } from "../../shared/errors.js";
 import { fetchComments } from "./service.js";
 
 export async function run(argv) {
@@ -19,7 +19,7 @@ export async function run(argv) {
     if (values.pr != null) {
         pr = Number(values.pr);
         if (!Number.isInteger(pr) || pr <= 0) {
-            throw new CliError(`Invalid --pr: ${values.pr}`);
+            throw new InvalidCliInputError(`${values.pr} is not a valid value for --pr. Use a positive integer.`);
         }
     }
 

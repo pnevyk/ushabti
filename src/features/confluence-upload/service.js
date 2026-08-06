@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolveAtlassian } from "../../shared/secrets.js";
-import { CliError } from "../../shared/errors.js";
+import { ValidationError } from "../../shared/errors.js";
 import { createConfluenceClient } from "../../shared/confluence-client.js";
 import { markdownToAdf } from "../../shared/adf.js";
 import { parse } from "../../shared/frontmatter.js";
@@ -17,7 +17,7 @@ export async function uploadPage({ file, config }) {
     const content = await readFile(file, "utf8");
     const { data, body } = parse(content);
     if (!data.id) {
-        throw new CliError("Frontmatter is missing required `id`");
+        throw new ValidationError("An id in the frontmatter is required to update a page. Add it and try again.");
     }
 
     const client = createConfluenceClient(config);

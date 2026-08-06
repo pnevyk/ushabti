@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
-import { CliError } from "../../shared/errors.js";
+import { InvalidCliInputError } from "../../shared/errors.js";
 import { fetchDigest, isValidDate } from "./service.js";
 
 export async function run(argv) {
@@ -16,13 +16,13 @@ export async function run(argv) {
     });
 
     if (values.since == null) {
-        throw new CliError("Missing required --since <date>");
+        throw new InvalidCliInputError("A start date is required for the digest window. Use --since <date>, e.g. --since 2026-01-01.");
     }
     if (!isValidDate(values.since)) {
-        throw new CliError(`Invalid --since: ${values.since} (expected YYYY-MM-DD or ISO datetime)`);
+        throw new InvalidCliInputError(`${values.since} is not a valid value for --since. Use YYYY-MM-DD or an ISO datetime.`);
     }
     if (values.until != null && !isValidDate(values.until)) {
-        throw new CliError(`Invalid --until: ${values.until} (expected YYYY-MM-DD or ISO datetime)`);
+        throw new InvalidCliInputError(`${values.until} is not a valid value for --until. Use YYYY-MM-DD or an ISO datetime.`);
     }
 
     const config = loadConfig(values.config);

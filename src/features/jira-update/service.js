@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolveAtlassian } from "../../shared/secrets.js";
-import { CliError } from "../../shared/errors.js";
+import { ValidationError } from "../../shared/errors.js";
 import { createJiraClient } from "../../shared/jira-client.js";
 import { markdownToAdf } from "../../shared/adf.js";
 import { parse } from "../../shared/frontmatter.js";
@@ -15,7 +15,7 @@ export async function updateTicket({ file, config }) {
     const content = await readFile(file, "utf8");
     const { data, body } = parse(content);
     if (!data.id) {
-        throw new CliError("Frontmatter is missing required `id`");
+        throw new ValidationError("An id in the frontmatter is required to update a ticket. Add it and try again.");
     }
     const fields = toUpdateFields({ data, body, spField, sprintField });
 
@@ -53,7 +53,7 @@ export function toUpdateFields({ data, body, spField, sprintField }) {
         fields[sprintField] = data.sprint;
     }
     if (Object.keys(fields).length === 0) {
-        throw new CliError("Frontmatter and body have no fields to update");
+        throw new ValidationError("No fields to update: the frontmatter and body are unchanged. Edit at least one and try again.");
     }
     return fields;
 }

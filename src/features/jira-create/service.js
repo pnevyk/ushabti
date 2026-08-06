@@ -1,7 +1,7 @@
 import { readFile, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { resolveAtlassian } from "../../shared/secrets.js";
-import { CliError } from "../../shared/errors.js";
+import { ValidationError } from "../../shared/errors.js";
 import { createJiraClient } from "../../shared/jira-client.js";
 import { markdownToAdf } from "../../shared/adf.js";
 import { parse, stringify } from "../../shared/frontmatter.js";
@@ -48,10 +48,14 @@ export function applyCreatedId({ data, body, key }) {
 // Pure: frontmatter + body -> Jira createIssue `fields` payload. Exported for tests.
 export function toIssueFields({ data, body, project, spField, sprintField }) {
     if (!data.title) {
-        throw new CliError("Frontmatter is missing required `title`");
+        throw new ValidationError(
+            "A title in the frontmatter is required to create a ticket. Add one and try again. See `ushabti jira template` for the full list of required and optional properties.",
+        );
     }
     if (!data.type) {
-        throw new CliError("Frontmatter is missing required `type`");
+        throw new ValidationError(
+            "A type in the frontmatter is required to create a ticket. Add one (e.g. `type: Task`) and try again. See `ushabti jira template` for the full list of required and optional properties.",
+        );
     }
 
     const fields = {

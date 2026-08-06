@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
-import { CliError } from "../../shared/errors.js";
+import { InvalidCliInputError } from "../../shared/errors.js";
 import { createPage } from "./service.js";
 
 export async function run(argv) {
@@ -15,10 +15,10 @@ export async function run(argv) {
     });
 
     if (!values.space) {
-        throw new CliError("Missing required --space <key>");
+        throw new InvalidCliInputError("A space key is required to create the page in it. Use --space <key>.");
     }
     if (!values.file) {
-        throw new CliError("Missing required --file <markdown>");
+        throw new InvalidCliInputError("A markdown file is required to read its frontmatter. Use --file <markdown>.");
     }
 
     const config = loadConfig(values.config);

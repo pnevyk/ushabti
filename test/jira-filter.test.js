@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { compilePredicate, loadTickets, filterTickets } from "../src/features/jira-filter/service.js";
-import { CliError } from "../src/shared/errors.js";
+import { InvalidCliInputError } from "../src/shared/errors.js";
 
 test("compilePredicate without expression matches all", () => {
     const p = compilePredicate(undefined);
@@ -33,13 +33,13 @@ test("compilePredicate coerces result to boolean", () => {
     assert.equal(p({ assignee: null }), false);
 });
 
-test("compilePredicate throws CliError on syntax error", () => {
-    assert.throws(() => compilePredicate("parent ==="), CliError);
+test("compilePredicate throws InvalidCliInputError on syntax error", () => {
+    assert.throws(() => compilePredicate("parent ==="), InvalidCliInputError);
 });
 
-test("compiled predicate throws CliError on unknown identifier", () => {
+test("compiled predicate throws InvalidCliInputError on unknown identifier", () => {
     const p = compilePredicate("bogus === 1");
-    assert.throws(() => p({}), CliError);
+    assert.throws(() => p({}), InvalidCliInputError);
 });
 
 test("loadTickets reads a JSON file", async () => {
@@ -73,8 +73,8 @@ test("loadTickets reads a markdown directory, falling back to filename for draft
     }
 });
 
-test("loadTickets throws CliError when the path is missing", async () => {
-    await assert.rejects(() => loadTickets(join(tmpdir(), "ushabti-missing-xyz")), CliError);
+test("loadTickets throws InvalidCliInputError when the path is missing", async () => {
+    await assert.rejects(() => loadTickets(join(tmpdir(), "ushabti-missing-xyz")), InvalidCliInputError);
 });
 
 test("filterTickets returns ids of matching tickets", async () => {

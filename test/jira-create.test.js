@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { toIssueFields, applyCreatedId } from "../src/features/jira-create/service.js";
 import { parse } from "../src/shared/frontmatter.js";
-import { CliError } from "../src/shared/errors.js";
+import { ValidationError } from "../src/shared/errors.js";
 
 test("toIssueFields builds required fields with ADF description", () => {
     const fields = toIssueFields({
@@ -45,8 +45,8 @@ test("toIssueFields omits story points and sprint when no field configured", () 
 });
 
 test("toIssueFields requires title and type", () => {
-    assert.throws(() => toIssueFields({ data: { type: "Task" }, body: "", project: "ABC", spField: null }), CliError);
-    assert.throws(() => toIssueFields({ data: { title: "t" }, body: "", project: "ABC", spField: null }), CliError);
+    assert.throws(() => toIssueFields({ data: { type: "Task" }, body: "", project: "ABC", spField: null }), ValidationError);
+    assert.throws(() => toIssueFields({ data: { title: "t" }, body: "", project: "ABC", spField: null }), ValidationError);
 });
 
 test("applyCreatedId sets id as the first frontmatter field and preserves body", () => {

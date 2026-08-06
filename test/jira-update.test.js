@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { toUpdateFields } from "../src/features/jira-update/service.js";
-import { CliError } from "../src/shared/errors.js";
+import { ValidationError } from "../src/shared/errors.js";
 
 test("toUpdateFields maps present fields with ADF description", () => {
     const fields = toUpdateFields({
@@ -43,6 +43,6 @@ test("toUpdateFields omits story points and sprint when no field configured", ()
 });
 
 test("toUpdateFields throws when there is nothing to update", () => {
-    assert.throws(() => toUpdateFields({ data: {}, body: "", spField: null }), CliError);
-    assert.throws(() => toUpdateFields({ data: { id: "ABC-1" }, body: "", spField: null }), CliError);
+    assert.throws(() => toUpdateFields({ data: {}, body: "", spField: null }), ValidationError);
+    assert.throws(() => toUpdateFields({ data: { id: "ABC-1" }, body: "", spField: null }), ValidationError);
 });

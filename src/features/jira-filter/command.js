@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import { existsSync } from "node:fs";
-import { CliError } from "../../shared/errors.js";
+import { InvalidCliInputError } from "../../shared/errors.js";
 import { filterTickets } from "./service.js";
 
 export async function run(argv) {
@@ -14,7 +14,7 @@ export async function run(argv) {
     });
 
     if (!values.project && !values.in) {
-        throw new CliError("Missing required --project <key> or --in <path>");
+        throw new InvalidCliInputError("A project key or an --in path is required to filter tickets. Use --project <key> or --in <path>.");
     }
 
     const inPath = values.in ?? defaultIn(values.project);
@@ -30,5 +30,5 @@ function defaultIn(project) {
     const dir = `jira-${project}`;
     if (existsSync(json)) return json;
     if (existsSync(dir)) return dir;
-    throw new CliError(`No input found: ${json} or ${dir}/ (pass --in <path>)`);
+    throw new InvalidCliInputError(`No input was found at ${json} or ${dir}/. Use --in <path> to point at one.`);
 }

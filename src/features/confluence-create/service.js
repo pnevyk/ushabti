@@ -1,7 +1,7 @@
 import { readFile, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { resolveAtlassian } from "../../shared/secrets.js";
-import { CliError } from "../../shared/errors.js";
+import { CliError, ValidationError } from "../../shared/errors.js";
 import { createConfluenceClient } from "../../shared/confluence-client.js";
 import { markdownToAdf } from "../../shared/adf.js";
 import { parse, stringify } from "../../shared/frontmatter.js";
@@ -56,7 +56,9 @@ export function applyCreatedId({ data, body, id }) {
 // Pure: frontmatter + body -> Confluence createPage `body` payload. Exported for tests.
 export function toCreateBody({ data, body, spaceId, plugins = [], defaults = {} }) {
     if (!data.title) {
-        throw new CliError("Frontmatter is missing required `title`");
+        throw new ValidationError(
+            "A title in the frontmatter is required to create a page. Add one and try again. See `ushabti confluence template` for the full list of required and optional properties.",
+        );
     }
 
     const pageBody = {

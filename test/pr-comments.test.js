@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { toThreads, pickPr } from "../src/features/pr-comments/service.js";
-import { CliError } from "../src/shared/errors.js";
+import { ValidationError } from "../src/shared/errors.js";
 
 test("pickPr returns number of sole matching open PR", () => {
     const prs = [
@@ -12,7 +12,7 @@ test("pickPr returns number of sole matching open PR", () => {
 });
 
 test("pickPr throws when no PR matches branch", () => {
-    assert.throws(() => pickPr([{ number: 1, head: { ref: "x" } }], "feature"), CliError);
+    assert.throws(() => pickPr([{ number: 1, head: { ref: "x" } }], "feature"), ValidationError);
 });
 
 test("pickPr throws when multiple PRs match branch", () => {
@@ -20,7 +20,7 @@ test("pickPr throws when multiple PRs match branch", () => {
         { number: 1, head: { ref: "feature" } },
         { number: 2, head: { ref: "feature" } },
     ];
-    assert.throws(() => pickPr(prs, "feature"), CliError);
+    assert.throws(() => pickPr(prs, "feature"), ValidationError);
 });
 
 test("drops resolved threads", () => {

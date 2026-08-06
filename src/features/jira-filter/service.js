@@ -1,6 +1,6 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join, basename } from "node:path";
-import { CliError } from "../../shared/errors.js";
+import { InvalidCliInputError } from "../../shared/errors.js";
 import { parse } from "../../shared/frontmatter.js";
 
 // Fields exposed as identifiers inside a --where expression.
@@ -21,7 +21,7 @@ export async function loadTickets(inPath) {
     try {
         info = await stat(inPath);
     } catch {
-        throw new CliError(`Input not found: ${inPath}`);
+        throw new InvalidCliInputError(`No input was found at ${inPath}. Check the --in path and try again.`);
     }
 
     if (info.isDirectory()) {
@@ -50,14 +50,14 @@ export function compilePredicate(where) {
     try {
         fn = new Function(...FIELDS, `"use strict"; return (${where});`);
     } catch (err) {
-        throw new CliError(`Invalid --where expression: ${err.message}`);
+        throw new InvalidCliInputError(`--where is not a valid expression: ${err.message}.`);
     }
 
     return (fields) => {
         try {
             return Boolean(fn(...FIELDS.map((f) => fields[f])));
         } catch (err) {
-            throw new CliError(`Error evaluating --where: ${err.message}`);
+            throw new InvalidCliInputError(`--where failed while evaluating a ticket: ${err.message}.`);
         }
     };
 }

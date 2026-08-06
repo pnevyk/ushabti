@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { toCreateBody, applyCreatedId } from "../src/features/confluence-create/service.js";
 import { parse } from "../src/shared/frontmatter.js";
-import { CliError } from "../src/shared/errors.js";
+import { ValidationError } from "../src/shared/errors.js";
 import { plugins } from "../src/plugins/index.js";
 
 test("toCreateBody builds required fields with ADF body", () => {
@@ -22,7 +22,7 @@ test("toCreateBody includes optional parentId", () => {
 });
 
 test("toCreateBody requires title", () => {
-    assert.throws(() => toCreateBody({ data: {}, body: "", spaceId: "999" }), CliError);
+    assert.throws(() => toCreateBody({ data: {}, body: "", spaceId: "999" }), ValidationError);
 });
 
 test("toCreateBody sets subtype live when frontmatter type is live", () => {

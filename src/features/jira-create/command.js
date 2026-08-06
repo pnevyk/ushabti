@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
-import { CliError } from "../../shared/errors.js";
+import { InvalidCliInputError } from "../../shared/errors.js";
 import { createTicket } from "./service.js";
 
 export async function run(argv) {
@@ -15,10 +15,10 @@ export async function run(argv) {
     });
 
     if (!values.file) {
-        throw new CliError("Missing required --file <markdown>");
+        throw new InvalidCliInputError("A markdown file is required to read its frontmatter. Use --file <markdown>.");
     }
     if (!values.project) {
-        throw new CliError("Missing required --project <key>");
+        throw new InvalidCliInputError("A project key is required to create the ticket in it. Use --project <key>, e.g. --project ABC.");
     }
 
     const config = loadConfig(values.config);

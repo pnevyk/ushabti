@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { join } from "node:path";
-import { CliError } from "../src/shared/errors.js";
+import { InvalidCliInputError, MissingConfigError } from "../src/shared/errors.js";
 import { GLOBAL_SECRETS_PATH, LOCAL_SECRETS_PATH } from "../src/shared/secrets-file.js";
 import {
     resolveSecret,
@@ -106,17 +106,17 @@ test("resolveAtlassian falls back per-field for a partially migrated config", (t
 });
 
 test("resolveAtlassian throws naming missing atlassian.* keys", () => {
-    assert.throws(() => resolveAtlassian({}, MISS_DEPS), CliError);
+    assert.throws(() => resolveAtlassian({}, MISS_DEPS), MissingConfigError);
     assert.throws(
         () => resolveAtlassian({ atlassian: { baseUrl: "u" } }, MISS_DEPS),
-        (err) => err instanceof CliError && err.message.includes("atlassian.email") && err.message.includes("atlassian.token"),
+        (err) => err instanceof MissingConfigError && err.message.includes("atlassian.email") && err.message.includes("atlassian.token"),
     );
 });
 
 test("validateService accepts github and atlassian, rejects anything else", () => {
     assert.doesNotThrow(() => validateService("github"));
     assert.doesNotThrow(() => validateService("atlassian"));
-    assert.throws(() => validateService("jira"), CliError);
+    assert.throws(() => validateService("jira"), InvalidCliInputError);
 });
 
 test("storeSecret stores globally in the keychain when it succeeds", () => {
@@ -168,7 +168,7 @@ test("storeSecret with local registers a scope and stores under its id", () => {
 });
 
 test("storeSecret rejects an unknown service before touching any dependency", () => {
-    assert.throws(() => storeSecret("jira", "tok", {}, {}), CliError);
+    assert.throws(() => storeSecret("jira", "tok", {}, {}), InvalidCliInputError);
 });
 
 test("deleteSecret skips the keychain when the local scope was never registered", () => {

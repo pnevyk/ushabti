@@ -4,7 +4,7 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { requireKeys, mergeConfig, loadOptionalConfig } from "../src/shared/config.js";
-import { CliError } from "../src/shared/errors.js";
+import { MissingConfigError } from "../src/shared/errors.js";
 
 const config = { github: { token: "t" }, jira: { baseUrl: "u", email: "", token: "a" } };
 
@@ -13,8 +13,8 @@ test("requireKeys passes when keys present", () => {
 });
 
 test("requireKeys throws on missing or empty keys", () => {
-    assert.throws(() => requireKeys(config, ["jira.email"]), CliError);
-    assert.throws(() => requireKeys(config, ["jira.nope"]), CliError);
+    assert.throws(() => requireKeys(config, ["jira.email"]), MissingConfigError);
+    assert.throws(() => requireKeys(config, ["jira.nope"]), MissingConfigError);
 });
 
 test("mergeConfig overrides top-level keys", () => {
@@ -60,5 +60,5 @@ test("loadOptionalConfig parses an explicit config path", async () => {
 });
 
 test("loadOptionalConfig still throws when an explicit config path doesn't exist", () => {
-    assert.throws(() => loadOptionalConfig(join(tmpdir(), "ushabti-missing-config-xyz.toml")), CliError);
+    assert.throws(() => loadOptionalConfig(join(tmpdir(), "ushabti-missing-config-xyz.toml")), MissingConfigError);
 });

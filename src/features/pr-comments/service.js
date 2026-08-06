@@ -1,4 +1,4 @@
-import { CliError } from "../../shared/errors.js";
+import { InvalidCliInputError, ValidationError } from "../../shared/errors.js";
 import { createGithubClient } from "../../shared/github-client.js";
 import { currentRepo, currentBranch } from "../../shared/git.js";
 import { serialize } from "../../shared/output/json.js";
@@ -38,7 +38,9 @@ export async function fetchComments({ repo, pr, out, all, config }) {
         try {
             repo = currentRepo();
         } catch {
-            throw new CliError("Could not determine repo from git; pass --repo <owner/name>");
+            throw new InvalidCliInputError(
+                "A repository is required to fetch PR comments, and none could be determined from git. Use --repo <owner/name>.",
+            );
         }
     }
     const [owner, name] = repo.split("/");
@@ -67,7 +69,7 @@ async function resolvePrForBranch(client, owner, name) {
     try {
         branch = currentBranch();
     } catch {
-        throw new CliError("Could not determine branch from git; pass --pr <n>");
+        throw new InvalidCliInputError("A PR number is required, and the current branch could not be determined from git. Use --pr <n>.");
     }
     const prs = await client.paginate(client.rest.pulls.list, {
         owner,
@@ -82,10 +84,10 @@ async function resolvePrForBranch(client, owner, name) {
 export function pickPr(prs, branch) {
     const matches = prs.filter((pr) => pr.head.ref === branch);
     if (matches.length === 0) {
-        throw new CliError(`No open PR found for branch ${branch}`);
+        throw new ValidationError(`No open PR was found for branch ${branch}. Use --pr <n> to pick one explicitly.`);
     }
     if (matches.length > 1) {
-        throw new CliError(`Multiple open PRs for branch ${branch}; pass --pr <n>`);
+        throw new ValidationError(`Multiple open PRs match branch ${branch}. Use --pr <n> to pick one.`);
     }
     return matches[0].number;
 }

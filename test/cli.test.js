@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { run } from "../src/cli/index.js";
-import { CliError } from "../src/shared/errors.js";
+import { InvalidCliInputError } from "../src/shared/errors.js";
 
-test("unknown command throws CliError", async () => {
-    await assert.rejects(() => run(["foo", "bar"]), CliError);
+test("unknown command throws InvalidCliInputError", async () => {
+    await assert.rejects(() => run(["foo", "bar"]), InvalidCliInputError);
 });
 
 test("help runs without error", async () => {

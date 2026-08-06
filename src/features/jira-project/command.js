@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
-import { CliError } from "../../shared/errors.js";
+import { InvalidCliInputError } from "../../shared/errors.js";
 import { fetchProject } from "./service.js";
 
 export async function run(argv) {
@@ -14,7 +14,7 @@ export async function run(argv) {
     });
 
     if (!values.project) {
-        throw new CliError("Missing required --project <key>");
+        throw new InvalidCliInputError("A project key is required to look up its people and boards. Use --project <key>, e.g. --project ABC.");
     }
 
     const out = values.out ?? `jira-${values.project}.ushabti.yaml`;

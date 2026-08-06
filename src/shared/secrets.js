@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { CliError } from "./errors.js";
+import { InvalidCliInputError, MissingConfigError } from "./errors.js";
 import { keychainGet, keychainSet, keychainDelete, keychainList } from "./keychain.js";
 import {
     LOCAL_SECRETS_PATH,
@@ -15,7 +15,7 @@ import {
     unregisterScope,
 } from "./secrets-file.js";
 
-const SERVICES = ["github", "atlassian"];
+export const SERVICES = ["github", "atlassian"];
 
 // jira.token predates the [atlassian] table; an inline value there is just as
 // deprecated as an inline atlassian.token, so it shares the same warning.
@@ -25,7 +25,7 @@ const warnedKeys = new Set();
 
 export function validateService(service) {
     if (!SERVICES.includes(service)) {
-        throw new CliError(`Invalid service: ${service} (expected one of: ${SERVICES.join(", ")})`);
+        throw new InvalidCliInputError(`${service} is not a supported secret. Use one of: ${SERVICES.join(", ")}.`);
     }
 }
 
@@ -34,7 +34,7 @@ export function validateService(service) {
 // of cwd, then global) -> dedicated secrets file (local-over-global) ->
 // (deprecated) inline in the main config, warning once. Returns undefined
 // (never throws) when all tiers miss -- callers decide how to phrase the
-// "Missing config keys" error, same as today. `deps` is test-only injection.
+// missing-config error, same as today. `deps` is test-only injection.
 export function resolveSecret(config, key, deps = {}) {
     const {
         getScopeId: getScopeIdFn = getScopeId,
@@ -93,7 +93,7 @@ function warnDeprecatedOnce(key) {
 }
 
 // Moved from config.js. Same contract/return shape as before: {baseUrl,
-// email, token}, throwing CliError naming any still-missing atlassian.*
+// email, token}, throwing MissingConfigError naming any still-missing atlassian.*
 // field. baseUrl/email aren't secrets and are read directly; token goes
 // through resolveSecret.
 export function resolveAtlassian(config, deps) {
@@ -108,7 +108,9 @@ export function resolveAtlassian(config, deps) {
         .filter(([, value]) => !value)
         .map(([field]) => `atlassian.${field}`);
     if (missing.length) {
-        throw new CliError(`Missing config keys: ${missing.join(", ")}`);
+        throw new MissingConfigError(
+            `The configuration is missing: ${missing.join(", ")}. Add baseUrl/email to your config file, and set the token with \`ushabti secrets set atlassian\`. See \`ushabti config template\` for the full list of fields.`,
+        );
     }
     return resolved;
 }

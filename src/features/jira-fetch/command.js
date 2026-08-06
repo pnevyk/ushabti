@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
-import { CliError } from "../../shared/errors.js";
+import { InvalidCliInputError } from "../../shared/errors.js";
 import { fetchTickets } from "./service.js";
 
 const FORMATS = ["json", "markdown"];
@@ -18,12 +18,12 @@ export async function run(argv) {
     });
 
     if (!values.id && !values.project) {
-        throw new CliError("Missing required --project <key> (or pass --id <ticket-id>)");
+        throw new InvalidCliInputError("A project key (or a specific ticket id) is required to fetch tickets. Use --project <key> or --id <ticket-id>.");
     }
 
     const format = values.format ?? "markdown";
     if (!FORMATS.includes(format)) {
-        throw new CliError(`Invalid --format: ${format} (expected ${FORMATS.join("|")})`);
+        throw new InvalidCliInputError(`${format} is not a valid value for --format. Use one of: ${FORMATS.join(", ")}.`);
     }
 
     const out = values.out ?? defaultOut(values.project, format, values.id);

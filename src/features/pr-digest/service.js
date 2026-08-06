@@ -1,4 +1,4 @@
-import { CliError } from "../../shared/errors.js";
+import { InvalidCliInputError } from "../../shared/errors.js";
 import { createGithubClient } from "../../shared/github-client.js";
 import { currentRepo } from "../../shared/git.js";
 import { serialize } from "../../shared/output/json.js";
@@ -11,7 +11,9 @@ export async function fetchDigest({ since, until, repo, out, config }) {
         try {
             repo = currentRepo();
         } catch {
-            throw new CliError("Could not determine repo from git; pass --repo <owner/name>");
+            throw new InvalidCliInputError(
+                "A repository is required to build the digest, and none could be determined from git. Use --repo <owner/name>.",
+            );
         }
     }
     const [owner, name] = repo.split("/");

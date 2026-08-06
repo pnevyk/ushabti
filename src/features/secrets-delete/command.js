@@ -1,5 +1,6 @@
 import { parseArgs } from "node:util";
-import { CliError } from "../../shared/errors.js";
+import { InvalidCliInputError } from "../../shared/errors.js";
+import { SERVICES } from "../../shared/secrets.js";
 import { removeSecret } from "./service.js";
 
 export async function run(argv) {
@@ -13,7 +14,9 @@ export async function run(argv) {
 
     const service = positionals[0];
     if (!service) {
-        throw new CliError("Usage: ushabti secrets delete <github|atlassian> [--local]");
+        throw new InvalidCliInputError(
+            `A service (${SERVICES.join(" or ")}) is required. Use \`ushabti secrets delete <${SERVICES.join("|")}> [--local]\`.`,
+        );
     }
 
     const { key, removedFromKeychain, removedFromFile } = removeSecret(service, { local: values.local ?? false });

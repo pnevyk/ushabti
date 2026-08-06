@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { openerCommand, resolveOpenBrowser } from "../src/shared/ui.js";
-import { CliError } from "../src/shared/errors.js";
+import { InvalidCliInputError } from "../src/shared/errors.js";
 
 test("openerCommand uses open on darwin", () => {
     assert.deepEqual(openerCommand("darwin", "http://127.0.0.1:1234"), ["open", ["http://127.0.0.1:1234"]]);
@@ -35,5 +35,5 @@ test("resolveOpenBrowser: --no-browser forces false even when config is true", (
 });
 
 test("resolveOpenBrowser throws when both --browser and --no-browser are given", () => {
-    assert.throws(() => resolveOpenBrowser({}, { browser: true, noBrowser: true }), CliError);
+    assert.throws(() => resolveOpenBrowser({}, { browser: true, noBrowser: true }), InvalidCliInputError);
 });

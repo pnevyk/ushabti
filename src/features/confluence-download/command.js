@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
-import { CliError } from "../../shared/errors.js";
+import { InvalidCliInputError } from "../../shared/errors.js";
 import { downloadPage, downloadTree } from "./service.js";
 
 const FORMATS = ["json", "markdown"];
@@ -18,12 +18,12 @@ export async function run(argv) {
     });
 
     if (!values.id) {
-        throw new CliError("Missing required --id <pageId>");
+        throw new InvalidCliInputError("A page id is required to download it. Use --id <pageId>.");
     }
 
     const format = values.format ?? "markdown";
     if (!FORMATS.includes(format)) {
-        throw new CliError(`Invalid --format: ${format} (expected ${FORMATS.join("|")})`);
+        throw new InvalidCliInputError(`${format} is not a valid value for --format. Use one of: ${FORMATS.join(", ")}.`);
     }
 
     const config = loadConfig(values.config);

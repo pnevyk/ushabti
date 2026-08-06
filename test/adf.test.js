@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { adfToMarkdown, markdownToAdf } from "../src/shared/adf.js";
 import { mermaidPlugin } from "../src/plugins/mermaid.js";
 import { umlPlugin } from "../src/plugins/uml.js";
-import { CliError } from "../src/shared/errors.js";
+import { InvalidConfigError } from "../src/shared/errors.js";
 
 const doc = (...content) => ({ version: 1, type: "doc", content });
 const text = (t, marks) => (marks ? { type: "text", text: t, marks } : { type: "text", text: t });
@@ -577,7 +577,7 @@ test("markdownToAdf: a fresh fence with no details comment uses the configured d
 });
 
 test("markdownToAdf: a fresh fence with no comment and no configured default throws", () => {
-    assert.throws(() => markdownToAdf("```mermaid\ngraph TD;\nA-->B;\n```", { plugins: PLUGINS }), CliError);
+    assert.throws(() => markdownToAdf("```mermaid\ngraph TD;\nA-->B;\n```", { plugins: PLUGINS }), InvalidConfigError);
 });
 
 test("markdownToAdf: a details comment's plugin id overrides the configured default", () => {

@@ -1,5 +1,5 @@
 import MarkdownIt from "markdown-it";
-import { CliError } from "./errors.js";
+import { InvalidConfigError } from "./errors.js";
 
 // Partial, two-way conversion between Atlassian Document Format (ADF) and
 // markdown. Covered: paragraphs, headings, bold/italic/code/strikethrough/
@@ -416,7 +416,10 @@ export function markdownToAdf(source, { plugins = [], defaults = {} } = {}) {
                     pluginState.pending = null;
                     const id = pending?.plugin ?? defaults[info];
                     if (!id) {
-                        throw new CliError(`No default confluence.plugins entry for target "${info}"`);
+                        const available = plugins.filter((p) => p.target === info).map((p) => p.id);
+                        throw new InvalidConfigError(
+                            `No confluence.plugins default is set for target "${info}". Add one under [confluence.plugins] in your config file, e.g. ${info} = "${available[0]}". See \`ushabti config template\` for the full list of fields.`,
+                        );
                     }
                     const plugin = plugins.find((p) => p.id === id);
                     const { plugin: _pluginId, ...details } = pending ?? {};

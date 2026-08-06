@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
-import { CliError } from "../../shared/errors.js";
+import { InvalidCliInputError } from "../../shared/errors.js";
 import { readStdinToEof, promptMasked } from "../../shared/prompt.js";
+import { SERVICES } from "../../shared/secrets.js";
 import { setSecret } from "./service.js";
 
 export async function run(argv) {
@@ -14,12 +15,14 @@ export async function run(argv) {
 
     const service = positionals[0];
     if (!service) {
-        throw new CliError("Usage: ushabti secrets set <github|atlassian> [--local]");
+        throw new InvalidCliInputError(
+            `A service (${SERVICES.join(" or ")}) is required. Use \`ushabti secrets set <${SERVICES.join("|")}> [--local]\`.`,
+        );
     }
 
     const value = process.stdin.isTTY ? await promptMasked(`Value for ${service}.token: `) : await readStdinToEof();
     if (!value) {
-        throw new CliError("No value provided");
+        throw new InvalidCliInputError("A token value is required. Pipe it in, or type it when prompted.");
     }
 
     const result = setSecret(service, value, { local: values.local ?? false });

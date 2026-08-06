@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import { CliError } from "./errors.js";
+import { InvalidCliInputError } from "./errors.js";
 
 // Starts a local HTTP server serving a single static HTML string at "/",
 // used by every `ui <tool>` command. Runs until the process is killed
@@ -47,7 +47,7 @@ export function openerCommand(platform, url) {
 // unit testing.
 export function resolveOpenBrowser(config, { browser, noBrowser }) {
     if (browser && noBrowser) {
-        throw new CliError("--browser and --no-browser are mutually exclusive");
+        throw new InvalidCliInputError("Only one of --browser or --no-browser can be used at a time. Drop one and try again.");
     }
     if (noBrowser) {
         return false;

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { parse } from "smol-toml";
-import { CliError } from "./errors.js";
+import { MissingConfigError } from "./errors.js";
 
 const LOCAL_PATH = "ushabti.config.toml";
 const GLOBAL_PATH = join(homedir(), ".config", "ushabti", "config.toml");
@@ -14,7 +14,9 @@ const GLOBAL_PATH = join(homedir(), ".config", "ushabti", "config.toml");
 export function loadConfig(path) {
     const config = tryLoadMerged(path);
     if (!config) {
-        throw new CliError(`Config file not found: ${path ?? `${LOCAL_PATH}, ${GLOBAL_PATH}`}`);
+        throw new MissingConfigError(
+            `No config file was found (checked ${path ?? `${LOCAL_PATH}, ${GLOBAL_PATH}`}). Run \`ushabti config template\` to create one.`,
+        );
     }
     return config;
 }
@@ -73,7 +75,9 @@ function isPlainObject(value) {
 export function requireKeys(config, keys) {
     const missing = keys.filter((key) => getPath(config, key) == null || getPath(config, key) === "");
     if (missing.length) {
-        throw new CliError(`Missing config keys: ${missing.join(", ")}`);
+        throw new MissingConfigError(
+            `The configuration is missing: ${missing.join(", ")}. Add them to your config file. See \`ushabti config template\` for the full list of fields.`,
+        );
     }
     return config;
 }
