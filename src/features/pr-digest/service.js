@@ -1,5 +1,6 @@
 import { InvalidCliInputError } from "../../shared/errors.js";
 import { createGithubClient } from "../../shared/github-client.js";
+import { toGithubError } from "../../shared/github-errors.js";
 import { currentRepo } from "../../shared/git.js";
 import { serialize } from "../../shared/output/json.js";
 import { write } from "../../shared/output/file.js";
@@ -20,30 +21,40 @@ export async function fetchDigest({ since, until, repo, out, config }) {
     const client = createGithubClient(config);
 
     const q = buildSearchQuery({ owner, name, since, until });
-    const items = await client.paginate(client.rest.search.issuesAndPullRequests, { q, per_page: 100 });
+    let items;
+    try {
+        items = await client.paginate(client.rest.search.issuesAndPullRequests, { q, per_page: 100 });
+    } catch (err) {
+        throw toGithubError(err, { resource: `${owner}/${name}` });
+    }
 
     const pullRequests = [];
     for (const item of items) {
-        const [reviews, reviewComments, comments] = await Promise.all([
-            client.paginate(client.rest.pulls.listReviews, {
-                owner,
-                repo: name,
-                pull_number: item.number,
-                per_page: 100,
-            }),
-            client.paginate(client.rest.pulls.listReviewComments, {
-                owner,
-                repo: name,
-                pull_number: item.number,
-                per_page: 100,
-            }),
-            client.paginate(client.rest.issues.listComments, {
-                owner,
-                repo: name,
-                issue_number: item.number,
-                per_page: 100,
-            }),
-        ]);
+        let reviews, reviewComments, comments;
+        try {
+            [reviews, reviewComments, comments] = await Promise.all([
+                client.paginate(client.rest.pulls.listReviews, {
+                    owner,
+                    repo: name,
+                    pull_number: item.number,
+                    per_page: 100,
+                }),
+                client.paginate(client.rest.pulls.listReviewComments, {
+                    owner,
+                    repo: name,
+                    pull_number: item.number,
+                    per_page: 100,
+                }),
+                client.paginate(client.rest.issues.listComments, {
+                    owner,
+                    repo: name,
+                    issue_number: item.number,
+                    per_page: 100,
+                }),
+            ]);
+        } catch (err) {
+            throw toGithubError(err, { resource: `${owner}/${name}#${item.number}` });
+        }
         pullRequests.push(toPrEntry(item, { reviews, reviewComments, comments }));
     }
 

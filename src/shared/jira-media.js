@@ -1,3 +1,5 @@
+import { toJiraError } from "./jira-errors.js";
+
 // Pure: match a target Media Services file id against a list of Jira
 // attachments that already carry their mediaApiFileId. Exported for unit
 // testing.
@@ -12,18 +14,32 @@ export function matchAttachmentByMediaFileId(attachments, mediaId) {
 // return a resolve(mediaId) closure over the fully-resolved list.
 export async function resolveIssueMedia(client, issue) {
     const attachments = issue.fields?.attachment ?? [];
-    const resolved = await Promise.all(
-        attachments.map(async (a) => ({
-            id: a.id,
-            filename: a.filename,
-            mediaApiFileId: a.mediaApiFileId ?? (await client.issueAttachments.getAttachment({ id: a.id })).mediaApiFileId,
-        })),
-    );
+    let resolved;
+    try {
+        resolved = await Promise.all(
+            attachments.map(async (a) => ({
+                id: a.id,
+                filename: a.filename,
+                mediaApiFileId: a.mediaApiFileId ?? (await client.issueAttachments.getAttachment({ id: a.id })).mediaApiFileId,
+            })),
+        );
+    } catch (err) {
+        throw toJiraError(err);
+    }
     return async (mediaId) => {
         const match = matchAttachmentByMediaFileId(resolved, mediaId);
         if (!match) {
             return null;
         }
-        return { filename: match.filename, fetchBytes: () => client.issueAttachments.getAttachmentContent({ id: match.id }) };
+        return {
+            filename: match.filename,
+            fetchBytes: async () => {
+                try {
+                    return await client.issueAttachments.getAttachmentContent({ id: match.id });
+                } catch (err) {
+                    throw toJiraError(err, { resource: match.filename });
+                }
+            },
+        };
     };
 }

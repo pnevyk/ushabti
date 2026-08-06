@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { resolveAtlassian } from "../../shared/secrets.js";
 import { ValidationError } from "../../shared/errors.js";
 import { createJiraClient } from "../../shared/jira-client.js";
+import { toJiraError } from "../../shared/jira-errors.js";
 import { markdownToAdf } from "../../shared/adf.js";
 import { parse, stringify } from "../../shared/frontmatter.js";
 import { write } from "../../shared/output/file.js";
@@ -20,7 +21,12 @@ export async function createTicket({ file, project, update, config }) {
     const fields = toIssueFields({ data, body, project, spField, sprintField });
 
     const client = createJiraClient(config);
-    const created = await client.issues.createIssue({ fields });
+    let created;
+    try {
+        created = await client.issues.createIssue({ fields });
+    } catch (err) {
+        throw toJiraError(err, { resource: project });
+    }
 
     const url = `${baseUrl.replace(/\/$/, "")}/browse/${created.key}`;
     console.log(`Created ${created.key}: ${url}`);

@@ -1,6 +1,7 @@
 import { dirname, join } from "node:path";
 import { resolveAtlassian } from "../../shared/secrets.js";
 import { createJiraClient } from "../../shared/jira-client.js";
+import { toJiraError } from "../../shared/jira-errors.js";
 import { adfToMarkdown } from "../../shared/adf.js";
 import { serialize } from "../../shared/output/json.js";
 import { stringify } from "../../shared/frontmatter.js";
@@ -22,17 +23,26 @@ export async function fetchTickets({ project, id, format, out, config }) {
 
     let issues;
     if (id) {
-        issues = [await client.issues.getIssue({ issueIdOrKey: id, fields })];
+        try {
+            issues = [await client.issues.getIssue({ issueIdOrKey: id, fields })];
+        } catch (err) {
+            throw toJiraError(err, { resource: id });
+        }
     } else {
         issues = [];
         let nextPageToken;
         do {
-            const result = await client.issueSearch.searchForIssuesUsingJqlEnhancedSearch({
-                jql: `project = "${project}"`,
-                fields,
-                maxResults: 100,
-                nextPageToken,
-            });
+            let result;
+            try {
+                result = await client.issueSearch.searchForIssuesUsingJqlEnhancedSearch({
+                    jql: `project = "${project}"`,
+                    fields,
+                    maxResults: 100,
+                    nextPageToken,
+                });
+            } catch (err) {
+                throw toJiraError(err, { resource: project });
+            }
             issues.push(...(result.issues ?? []));
             nextPageToken = result.nextPageToken ?? undefined;
         } while (nextPageToken);

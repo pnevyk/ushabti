@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { parse } from "smol-toml";
-import { MissingConfigError } from "./errors.js";
+import { MissingConfigError, UnexpectedIoError } from "./errors.js";
 
 const LOCAL_PATH = "ushabti.config.toml";
 const GLOBAL_PATH = join(homedir(), ".config", "ushabti", "config.toml");
@@ -51,7 +51,11 @@ function tryParse(path) {
     } catch {
         return null;
     }
-    return parse(raw);
+    try {
+        return parse(raw);
+    } catch (err) {
+        throw new UnexpectedIoError({ service: "config", cause: err });
+    }
 }
 
 // Pure: deep-merge two parsed config objects, `override` taking precedence

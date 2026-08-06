@@ -1,6 +1,7 @@
 import { dirname } from "node:path";
 import { resolveAtlassian } from "../../shared/secrets.js";
 import { createJiraClient } from "../../shared/jira-client.js";
+import { toJiraError } from "../../shared/jira-errors.js";
 import { adfToMarkdown } from "../../shared/adf.js";
 import { serialize } from "../../shared/output/json.js";
 import { write } from "../../shared/output/file.js";
@@ -16,7 +17,12 @@ export async function fetchComments({ id, format, out, config }) {
     const raw = [];
     let startAt = 0;
     for (;;) {
-        const page = await client.issueComments.getComments({ issueIdOrKey: id, startAt, maxResults: 100 });
+        let page;
+        try {
+            page = await client.issueComments.getComments({ issueIdOrKey: id, startAt, maxResults: 100 });
+        } catch (err) {
+            throw toJiraError(err, { resource: id });
+        }
         const batch = page.comments ?? [];
         raw.push(...batch);
         startAt += batch.length;
@@ -44,7 +50,12 @@ async function downloadCommentsMedia(client, id, comments, containingDir) {
     if (!mediaIds.length) {
         return;
     }
-    const issue = await client.issues.getIssue({ issueIdOrKey: id, fields: ["attachment"] });
+    let issue;
+    try {
+        issue = await client.issues.getIssue({ issueIdOrKey: id, fields: ["attachment"] });
+    } catch (err) {
+        throw toJiraError(err, { resource: id });
+    }
     const resolve = await resolveIssueMedia(client, issue);
     const idToFilename = await downloadMedia({ mediaIds, resolve, containingDir, baseName: id });
     for (const comment of comments) {

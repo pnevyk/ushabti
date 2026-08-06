@@ -8,7 +8,17 @@ import { stringify } from "../../shared/frontmatter.js";
 import { write, ensureDir } from "../../shared/output/file.js";
 import { nodeBasename, nodeFilename } from "../../shared/confluence-naming.js";
 import { findMediaIds, rewriteMediaLinks, downloadMedia } from "../../shared/media-download.js";
-import { CliError } from "../../shared/errors.js";
+import {
+    AuthenticationError,
+    PermissionError,
+    NotFoundError,
+    RateLimitedError,
+    ServiceUnavailableError,
+    ConnectionError,
+    UnexpectedIoError,
+} from "../../shared/errors.js";
+import { toConfluenceError } from "../../shared/confluence-errors.js";
+import { networkErrorCode } from "../../shared/error-signals.js";
 import { plugins } from "../../plugins/index.js";
 
 // Orchestrates: fetch a single Confluence page (as Atlas Document Format),
@@ -18,7 +28,12 @@ export async function downloadPage({ id, format, out, config }) {
     const credentials = resolveAtlassian(config);
 
     const client = createConfluenceClient(config);
-    const page = await client.page.getPageById({ id: Number(id), bodyFormat: "atlas_doc_format" });
+    let page;
+    try {
+        page = await client.page.getPageById({ id: Number(id), bodyFormat: "atlas_doc_format" });
+    } catch (err) {
+        throw toConfluenceError(err, { resource: `page ${id}` });
+    }
     const mapped = toPage(page);
 
     const ext = format === "markdown" ? "md" : "ushabti.json";
@@ -58,10 +73,15 @@ async function resolveRoot(client, id) {
         return { type: "page", mapped: toPage(page) };
     } catch (err) {
         if (!isNotFoundError(err)) {
-            throw err;
+            throw toConfluenceError(err, { resource: `page ${id}` });
         }
     }
-    const folder = await client.folder.getFolderById({ id });
+    let folder;
+    try {
+        folder = await client.folder.getFolderById({ id });
+    } catch (err) {
+        throw toConfluenceError(err, { resource: `folder ${id}` });
+    }
     return { type: "folder", mapped: toFolder(folder) };
 }
 
@@ -73,10 +93,15 @@ async function fetchDescendants(client, rootType, rootId) {
     const items = [];
     let cursor;
     do {
-        const page =
-            rootType === "folder"
-                ? await client.descendants.getFolderDescendants({ id: rootId, cursor })
-                : await client.descendants.getPageDescendants({ id: rootId, cursor });
+        let page;
+        try {
+            page =
+                rootType === "folder"
+                    ? await client.descendants.getFolderDescendants({ id: rootId, cursor })
+                    : await client.descendants.getPageDescendants({ id: rootId, cursor });
+        } catch (err) {
+            throw toConfluenceError(err, { resource: `${rootType} ${rootId}` });
+        }
         items.push(...(page.results ?? []));
         cursor = nextCursor(page._links);
     } while (cursor);
@@ -110,10 +135,15 @@ async function writeNode(client, mapped, containingDir, format, keptChildrenByPa
     const childDir = join(containingDir, nodeBasename(mapped));
     await ensureDir(childDir);
     for (const child of children) {
-        const childMapped =
-            child.type === "folder"
-                ? toFolder(await client.folder.getFolderById({ id: Number(child.id) }))
-                : toPage(await client.page.getPageById({ id: Number(child.id), bodyFormat: "atlas_doc_format" }));
+        let childMapped;
+        try {
+            childMapped =
+                child.type === "folder"
+                    ? toFolder(await client.folder.getFolderById({ id: Number(child.id) }))
+                    : toPage(await client.page.getPageById({ id: Number(child.id), bodyFormat: "atlas_doc_format" }));
+        } catch (err) {
+            throw toConfluenceError(err, { resource: `${child.type} ${child.id}` });
+        }
         await writeNode(client, childMapped, childDir, format, keptChildrenByParent, credentials);
     }
 }
@@ -149,7 +179,12 @@ async function resolvePageMedia(client, pageId, credentials) {
     const attachments = [];
     let cursor;
     do {
-        const page = await client.attachment.getPageAttachments({ id: pageId, cursor });
+        let page;
+        try {
+            page = await client.attachment.getPageAttachments({ id: pageId, cursor });
+        } catch (err) {
+            throw toConfluenceError(err, { resource: `page ${pageId}` });
+        }
         attachments.push(...(page.results ?? []));
         cursor = nextCursor(page._links);
     } while (cursor);
@@ -172,9 +207,23 @@ async function resolvePageMedia(client, pageId, credentials) {
 async function fetchAttachmentBytes(downloadLink, { baseUrl, email, token }) {
     const url = new URL(`/wiki${downloadLink}`, baseUrl);
     const auth = Buffer.from(`${email}:${token}`).toString("base64");
-    const response = await fetch(url, { headers: { Authorization: `Basic ${auth}` } });
+    let response;
+    try {
+        response = await fetch(url, { headers: { Authorization: `Basic ${auth}` } });
+    } catch (err) {
+        const code = networkErrorCode(err);
+        throw code
+            ? new ConnectionError({ service: "confluence", cause: err, code })
+            : new UnexpectedIoError({ service: "confluence", cause: err });
+    }
     if (!response.ok) {
-        throw new CliError(`Failed to download attachment: ${response.status} ${response.statusText}`);
+        const cause = new Error(`${response.status} ${response.statusText}`);
+        if (response.status === 401) throw new AuthenticationError({ service: "confluence", cause });
+        if (response.status === 403) throw new PermissionError({ service: "confluence", cause, resource: downloadLink });
+        if (response.status === 404) throw new NotFoundError({ service: "confluence", cause, resource: downloadLink });
+        if (response.status === 429) throw new RateLimitedError({ service: "confluence", cause });
+        if (response.status >= 500) throw new ServiceUnavailableError({ service: "confluence", cause });
+        throw new UnexpectedIoError({ service: "confluence", cause });
     }
     return Buffer.from(await response.arrayBuffer());
 }

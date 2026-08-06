@@ -1,5 +1,6 @@
 import { InvalidCliInputError, ValidationError } from "../../shared/errors.js";
 import { createGithubClient } from "../../shared/github-client.js";
+import { toGithubError } from "../../shared/github-errors.js";
 import { currentRepo, currentBranch } from "../../shared/git.js";
 import { serialize } from "../../shared/output/json.js";
 import { write } from "../../shared/output/file.js";
@@ -53,7 +54,12 @@ export async function fetchComments({ repo, pr, out, all, config }) {
     const nodes = [];
     let cursor = null;
     do {
-        const result = await client.graphql(QUERY, { owner, name, number: pr, cursor });
+        let result;
+        try {
+            result = await client.graphql(QUERY, { owner, name, number: pr, cursor });
+        } catch (err) {
+            throw toGithubError(err, { resource: `${owner}/${name}#${pr}` });
+        }
         const threads = result.repository.pullRequest.reviewThreads;
         nodes.push(...threads.nodes);
         cursor = threads.pageInfo.hasNextPage ? threads.pageInfo.endCursor : null;
@@ -71,12 +77,17 @@ async function resolvePrForBranch(client, owner, name) {
     } catch {
         throw new InvalidCliInputError("A PR number is required, and the current branch could not be determined from git. Use --pr <n>.");
     }
-    const prs = await client.paginate(client.rest.pulls.list, {
-        owner,
-        repo: name,
-        state: "open",
-        per_page: 100,
-    });
+    let prs;
+    try {
+        prs = await client.paginate(client.rest.pulls.list, {
+            owner,
+            repo: name,
+            state: "open",
+            per_page: 100,
+        });
+    } catch (err) {
+        throw toGithubError(err, { resource: `${owner}/${name}` });
+    }
     return pickPr(prs, branch);
 }
 

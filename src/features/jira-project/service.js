@@ -1,6 +1,7 @@
 import { stringify as stringifyYaml } from "yaml";
 import { resolveAtlassian } from "../../shared/secrets.js";
 import { createJiraClient, createJiraAgileClient } from "../../shared/jira-client.js";
+import { toJiraError } from "../../shared/jira-errors.js";
 import { write } from "../../shared/output/file.js";
 
 const PAGE_SIZE = 50;
@@ -29,11 +30,12 @@ async function fetchAssignableUsers(client, project) {
     const users = [];
     let startAt = 0;
     for (;;) {
-        const page = await client.userSearch.findAssignableUsers({
-            project,
-            startAt,
-            maxResults: PAGE_SIZE,
-        });
+        let page;
+        try {
+            page = await client.userSearch.findAssignableUsers({ project, startAt, maxResults: PAGE_SIZE });
+        } catch (err) {
+            throw toJiraError(err, { resource: project });
+        }
         const batch = page ?? [];
         users.push(...batch);
         if (batch.length < PAGE_SIZE) break;
@@ -59,7 +61,12 @@ async function collectPaged(getPage) {
     const items = [];
     let startAt = 0;
     for (;;) {
-        const page = await getPage(startAt);
+        let page;
+        try {
+            page = await getPage(startAt);
+        } catch (err) {
+            throw toJiraError(err);
+        }
         const values = page?.values ?? [];
         items.push(...values);
         if (page?.isLast || values.length === 0) break;

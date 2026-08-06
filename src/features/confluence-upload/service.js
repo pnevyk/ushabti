@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolveAtlassian } from "../../shared/secrets.js";
 import { ValidationError } from "../../shared/errors.js";
 import { createConfluenceClient } from "../../shared/confluence-client.js";
+import { toConfluenceError } from "../../shared/confluence-errors.js";
 import { markdownToAdf } from "../../shared/adf.js";
 import { parse } from "../../shared/frontmatter.js";
 import { plugins, resolveDefaults } from "../../plugins/index.js";
@@ -21,10 +22,20 @@ export async function uploadPage({ file, config }) {
     }
 
     const client = createConfluenceClient(config);
-    const current = await client.page.getPageById({ id: Number(data.id) });
+    let current;
+    try {
+        current = await client.page.getPageById({ id: Number(data.id) });
+    } catch (err) {
+        throw toConfluenceError(err, { resource: `page ${data.id}` });
+    }
     const pageBody = toUpdateBody({ data, body, current, plugins, defaults });
 
-    const updated = await client.page.updatePage({ id: Number(data.id), body: pageBody });
+    let updated;
+    try {
+        updated = await client.page.updatePage({ id: Number(data.id), body: pageBody });
+    } catch (err) {
+        throw toConfluenceError(err, { resource: `page ${data.id}` });
+    }
 
     const url = `${baseUrl.replace(/\/$/, "")}${updated._links?.webui ?? ""}`;
     console.log(`Updated ${data.id}: ${url}`);

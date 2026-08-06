@@ -1,8 +1,9 @@
 import { readFile, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { resolveAtlassian } from "../../shared/secrets.js";
-import { CliError, ValidationError } from "../../shared/errors.js";
+import { ValidationError, NotFoundError } from "../../shared/errors.js";
 import { createConfluenceClient } from "../../shared/confluence-client.js";
+import { toConfluenceError } from "../../shared/confluence-errors.js";
 import { markdownToAdf } from "../../shared/adf.js";
 import { parse, stringify } from "../../shared/frontmatter.js";
 import { write } from "../../shared/output/file.js";
@@ -18,17 +19,27 @@ export async function createPage({ space, file, update, config }) {
     const defaults = resolveDefaults(config);
     const client = createConfluenceClient(config);
 
-    const spaces = await client.space.getSpaces({ keys: [space] });
+    let spaces;
+    try {
+        spaces = await client.space.getSpaces({ keys: [space] });
+    } catch (err) {
+        throw toConfluenceError(err, { resource: `space ${space}` });
+    }
     const spaceId = spaces.results?.[0]?.id;
     if (!spaceId) {
-        throw new CliError(`Space not found: ${space}`);
+        throw new NotFoundError({ service: "confluence", resource: `space ${space}` });
     }
 
     const content = await readFile(file, "utf8");
     const { data, body } = parse(content);
     const pageBody = toCreateBody({ data, body, spaceId, plugins, defaults });
 
-    const created = await client.page.createPage({ body: pageBody });
+    let created;
+    try {
+        created = await client.page.createPage({ body: pageBody });
+    } catch (err) {
+        throw toConfluenceError(err, { resource: `space ${space}` });
+    }
 
     const url = `${baseUrl.replace(/\/$/, "")}${created._links?.webui ?? ""}`;
     console.log(`Created ${created.id}: ${url}`);

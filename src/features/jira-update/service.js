@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolveAtlassian } from "../../shared/secrets.js";
 import { ValidationError } from "../../shared/errors.js";
 import { createJiraClient } from "../../shared/jira-client.js";
+import { toJiraError } from "../../shared/jira-errors.js";
 import { markdownToAdf } from "../../shared/adf.js";
 import { parse } from "../../shared/frontmatter.js";
 
@@ -20,7 +21,11 @@ export async function updateTicket({ file, config }) {
     const fields = toUpdateFields({ data, body, spField, sprintField });
 
     const client = createJiraClient(config);
-    await client.issues.editIssue({ issueIdOrKey: String(data.id), fields });
+    try {
+        await client.issues.editIssue({ issueIdOrKey: String(data.id), fields });
+    } catch (err) {
+        throw toJiraError(err, { resource: String(data.id) });
+    }
 
     const url = `${baseUrl.replace(/\/$/, "")}/browse/${data.id}`;
     console.log(`Updated ${data.id}: ${url}`);
