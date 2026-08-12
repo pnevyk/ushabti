@@ -23,3 +23,8 @@ User-facing documentation lives in `docs/`, following the Diataxis framework:
 - `docs/reference/` — exhaustive, lookup-oriented facts (config fields, ADF-to-Markdown mapping).
 
 After any change to the CLI's behavior, commands, or config, check `docs/` for consistency and proactively fix anything it no longer describes correctly.
+
+## Changelog
+
+- Add a bullet to `CHANGELOG.md` under `## [Unreleased]` for every change to CLI behavior, commands, or config, in the `Added`/`Changed`/`Fixed`/`Removed` subsection that fits (create the subsection heading if it doesn't exist yet, in that order).
+- On release, rename `[Unreleased]` to the new version and date, add a fresh empty `[Unreleased]` above it, and update the compare links at the bottom of the file.

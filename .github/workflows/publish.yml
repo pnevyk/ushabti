@@ -1,0 +1,34 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+      # Trusted publishing (OIDC) needs npm >=11.5.1. Pin explicitly instead
+      # of trusting whatever npm version happens to ship with the Node 24
+      # build that setup-node installs.
+      - run: npm install -g npm@^11.5.1
+
+      - run: npm publish --provenance
