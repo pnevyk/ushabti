@@ -8,26 +8,37 @@ For the full list of config fields and what each one does, see the [configuratio
 ushabti requires Node.js 24 or newer.
 
 ```sh
-git clone git@github.com:pnevyk/ushabti.git
-cd ushabti
-pnpm install
-npm install -g .
+npm install -g ushabti
 ```
 
-This installs the `ushabti` command globally, backed by the checked-out source.
 Confirm it worked:
 
 ```sh
 ushabti --help
 ```
 
+### Install from source
+
+To run a development checkout instead of the published package:
+
+```sh
+git clone git@github.com:pnevyk/ushabti.git
+cd ushabti
+pnpm install
+npm install -g .
+```
+
 ## Update
+
+```sh
+npm install -g ushabti
+```
+
+Updating a source checkout:
 
 ```sh
 cd ushabti
 git pull
-
-# Not strictly necessary but safer.
 pnpm install
 npm install -g .
 ```

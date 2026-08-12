@@ -14,17 +14,22 @@ Read the [docs](docs/) for more detailed getting started, how to guides and refe
 Install:
 
 ```sh
-git clone git@github.com:pnevyk/ushabti.git
-cd ushabti
-pnpm install
-npm install -g .
+npm install -g ushabti
 ```
 
-Configure by copying the example config to the user config location and fill in credentials:
+Or try it without installing:
+
+```sh
+npx ushabti --help
+```
+
+See [installing from source](docs/getting-started.md#install-from-source) to run a development checkout instead.
+
+Configure by generating the example config at the user config location and filling in credentials:
 
 ```sh
 mkdir -p ~/.config/ushabti
-cp ushabti.config.example.toml ~/.config/ushabti/config.toml
+ushabti config template > ~/.config/ushabti/config.toml
 ```
 
 ushabti looks for `./ushabti.config.toml` first, then `~/.config/ushabti/config.toml`.
