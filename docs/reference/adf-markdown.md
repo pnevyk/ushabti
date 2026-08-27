@@ -41,7 +41,25 @@ Panels round-trip through GFM alert syntax — a blockquote whose first line is 
 
 ## Tables
 
-A GFM pipe table. ADF's first row becomes the header row (GFM requires one); a cell's block content is flattened onto a single line, since GFM table cells can't hold block structure.
+A GFM pipe table. GFM can only express "row 1 is the header" positionally, but ADF marks header cells individually, so a table can have a header row, a header column, both, or neither. A table with a header row only (GFM's native shape) needs no extra markup; anything else gets a sentinel comment right before the table so the exact header cells come back on upload:
+
+```markdown
+<!-- table:header=none -->
+
+| Name | Role |
+| --- | --- |
+| Alice | Eng |
+```
+
+`none`, `column`, and `both` are the three non-default modes; a table with a header row only never needs the sentinel.
+
+A cell's block content is flattened onto a single line, since GFM table cells can't hold block structure. A flat bullet or ordered list (one paragraph per item, no nesting) is the one exception: it's `<br>`-joined instead of flattened to plain text, so it round-trips as a real list even though it won't render as actual bullets on GitHub:
+
+```markdown
+| Names | - Alice<br>- Bob<br>- Carol |
+```
+
+A macro without an editable body (see [Macros](#macros-confluence-extensions) below) always uses its inline sentinel form inside a cell, even for a macro that would otherwise render as a fenced block at the top level. Anything richer in a cell — a nested list, a macro with an editable body, mixed block content — falls back to flattened plain text, the same limitation `nestedExpand` already has there.
 
 ## Task lists and decision lists
 

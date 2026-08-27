@@ -53,6 +53,19 @@ test("adfToMarkdown: nested bullet list", () => {
     assert.equal(adfToMarkdown(adf), "- one\n  - nested\n- two");
 });
 
+test("adfToMarkdown: ordered list renders with numbered markers, not bullets", () => {
+    const adf = doc({
+        type: "orderedList",
+        content: ["First", "Second", "Third"].map((t) => ({ type: "listItem", content: [{ type: "paragraph", content: [text(t)] }] })),
+    });
+    assert.equal(adfToMarkdown(adf), "1. First\n2. Second\n3. Third");
+});
+
+test("round-trip: ordered list survives adf conversion", () => {
+    const src = "1. First\n2. Second\n3. Third";
+    assert.equal(adfToMarkdown(markdownToAdf(src)), src);
+});
+
 test("adfToMarkdown: code block keeps language", () => {
     const adf = doc({ type: "codeBlock", attrs: { language: "js" }, content: [text("const x = 1;")] });
     assert.equal(adfToMarkdown(adf), "```js\nconst x = 1;\n```");
@@ -121,6 +134,102 @@ test("adfToMarkdown: table renders as a GFM pipe table", () => {
 test("round-trip: markdown table survives adf conversion", () => {
     const src = "| Code | Meaning |\n| --- | --- |\n| a01 | Clear |";
     assert.equal(adfToMarkdown(markdownToAdf(src)), src);
+});
+
+test("adfToMarkdown: table with no header row or column gets a header=none sentinel", () => {
+    const cell = (type, t) => ({ type, attrs: {}, content: [{ type: "paragraph", content: [text(t)] }] });
+    const adf = doc({
+        type: "table",
+        content: [
+            { type: "tableRow", content: [cell("tableCell", "a01"), cell("tableCell", "Clear")] },
+            { type: "tableRow", content: [cell("tableCell", "b02"), cell("tableCell", "Warn")] },
+        ],
+    });
+    assert.equal(
+        adfToMarkdown(adf),
+        "<!-- table:header=none -->\n\n| a01 | Clear |\n| --- | --- |\n| b02 | Warn |",
+    );
+});
+
+for (const mode of ["none", "column", "both"]) {
+    test(`round-trip: table header mode "${mode}" survives adf conversion`, () => {
+        const cell = (type, t) => ({ type, attrs: {}, content: [{ type: "paragraph", content: [text(t)] }] });
+        const headerRow = mode === "both";
+        const headerColumn = mode === "column" || mode === "both";
+        const type = (r, c) => (r === 0 && headerRow) || (c === 0 && headerColumn) ? "tableHeader" : "tableCell";
+        const adf = doc({
+            type: "table",
+            content: [0, 1].map((r) => ({ type: "tableRow", content: [0, 1].map((c) => cell(type(r, c), `r${r}c${c}`)) })),
+        });
+        const md = adfToMarkdown(adf);
+        assert.equal(adfToMarkdown(markdownToAdf(md)), md);
+        assert.deepEqual(markdownToAdf(md).content[0], adf.content[0]);
+    });
+}
+
+test("markdownToAdf: a table with no header sentinel still defaults row 1 to a header (GFM's native shape)", () => {
+    const src = "| Code | Meaning |\n| --- | --- |\n| a01 | Clear |";
+    const adf = markdownToAdf(src);
+    assert.equal(adf.content[0].content[0].content[0].type, "tableHeader");
+    assert.equal(adf.content[0].content[1].content[0].type, "tableCell");
+});
+
+test("adfToMarkdown: a flat bullet list in a table cell renders <br>-joined, not flattened to broken hyphens", () => {
+    const cell = (content) => ({ type: "tableCell", attrs: {}, content });
+    const names = {
+        type: "bulletList",
+        content: ["Alice", "Bob", "Carol"].map((n) => ({ type: "listItem", content: [{ type: "paragraph", content: [text(n)] }] })),
+    };
+    const adf = doc({
+        type: "table",
+        content: [{ type: "tableRow", content: [cell([{ type: "paragraph", content: [text("Names")] }]), cell([names])] }],
+    });
+    assert.equal(adfToMarkdown(adf), "<!-- table:header=none -->\n\n| Names | - Alice<br>- Bob<br>- Carol |\n| --- | --- |");
+});
+
+test("round-trip: a bullet list in a table cell survives adf conversion", () => {
+    const cell = (content) => ({ type: "tableCell", attrs: {}, content });
+    const names = {
+        type: "bulletList",
+        content: ["Alice", "Bob", "Carol"].map((n) => ({ type: "listItem", content: [{ type: "paragraph", content: [text(n)] }] })),
+    };
+    const adf = doc({
+        type: "table",
+        content: [{ type: "tableRow", content: [cell([{ type: "paragraph", content: [text("Names")] }]), cell([names])] }],
+    });
+    const md = adfToMarkdown(adf);
+    assert.equal(adfToMarkdown(markdownToAdf(md)), md);
+    assert.deepEqual(markdownToAdf(md).content[0].content[0].content[1].content[0], names);
+});
+
+test("round-trip: an ordered list in a table cell survives adf conversion", () => {
+    const cell = (content) => ({ type: "tableCell", attrs: {}, content });
+    const steps = {
+        type: "orderedList",
+        content: ["First", "Second"].map((n) => ({ type: "listItem", content: [{ type: "paragraph", content: [text(n)] }] })),
+    };
+    const adf = doc({ type: "table", content: [{ type: "tableRow", content: [cell([steps])] }] });
+    const md = adfToMarkdown(adf);
+    assert.equal(adfToMarkdown(markdownToAdf(md)), md);
+    assert.deepEqual(markdownToAdf(md).content[0].content[0].content[0].content[0], steps);
+});
+
+test("adfToMarkdown: a block extension (e.g. table of contents) in a cell renders as an inline macro sentinel", () => {
+    const cell = (content) => ({ type: "tableCell", attrs: {}, content });
+    const toc = { type: "extension", attrs: { extensionKey: "toc", parameters: {} } };
+    const adf = doc({ type: "table", content: [{ type: "tableRow", content: [cell([toc])] }] });
+    assert.equal(
+        adfToMarkdown(adf),
+        '<!-- table:header=none -->\n\n| `[confluence-macro:{"extensionKey":"toc","parameters":{}}]` |\n| --- |',
+    );
+});
+
+test("round-trip: a block extension in a table cell survives adf conversion", () => {
+    const cell = (content) => ({ type: "tableCell", attrs: {}, content });
+    const toc = { type: "extension", attrs: { extensionKey: "toc", parameters: {} } };
+    const adf = doc({ type: "table", content: [{ type: "tableRow", content: [cell([toc])] }] });
+    const md = adfToMarkdown(adf);
+    assert.equal(adfToMarkdown(markdownToAdf(md)), md);
 });
 
 const TICKET = "https://acme.atlassian.net/browse/TEF-153";

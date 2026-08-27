@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Confluence table round-trip: a table with no header row/column no longer gains one on re-upload (records header row/column/both/none via a `<!-- table:header=... -->` sentinel), a flat bullet/ordered list in a table cell no longer collapses into broken hyphens, and a macro (e.g. table of contents) in a table cell no longer comes back as raw JSON text.
+- Ordered lists now render with numbered markers (`1.`, `2.`, ...) instead of bullet dashes.
+
 ## [0.1.0] - 2026-08-12
 
 ### Added

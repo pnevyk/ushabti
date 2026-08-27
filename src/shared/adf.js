@@ -50,6 +50,25 @@ import { InvalidConfigError } from "./errors.js";
 //   cells) is indistinguishable once GFM's cell-flattening already discards
 //   block structure there, same limitation as any other block content in a
 //   cell.
+// - Table headers: GFM tables can only express "row 1 is the header"
+//   positionally, but ADF marks header cells individually (tableHeader vs
+//   tableCell), so a table can have a header row, a header column, both, or
+//   neither. A `<!-- table:header=none|column|both -->` sentinel immediately
+//   above the table records anything other than "row" (GFM's native default,
+//   needing no sentinel) so the exact cell types come back on upload.
+// - A flat bullet/ordered list inside a table cell (one paragraph per item,
+//   no nesting): `<br>`-joined markers, e.g. `- Alice<br>- Bob`. Won't render
+//   as real bullets on GitHub (GFM cells can't hold block content at all),
+//   but round-trips losslessly. A richer list (nested, or mixed with other
+//   blocks) falls back to flattened plain text, same limitation as any other
+//   non-list block content in a cell.
+// - A macro without an editable body (`extension`/`inlineExtension`) inside a
+//   table cell always uses the inline `` `[confluence-macro:{...}]` ``
+//   sentinel (never the block fence), since a fence can't survive a cell's
+//   single-line flattening. `bodiedExtension` (a macro with an editable
+//   body, e.g. "Expand") inside a cell is out of scope -- its sentinel pair
+//   spans multiple lines, so it degrades to flattened plain text like any
+//   other non-list block content in a cell.
 
 // ---------------------------------------------------------------------------
 // ADF -> markdown
@@ -91,9 +110,9 @@ function renderBlock(node, options) {
             return prefixLines(text, "> ");
         }
         case "bulletList":
-            return renderList(node, "bullet", options);
+            return options?.cell ? renderListForCell(node, "bullet") : renderList(node, "bullet", options);
         case "orderedList":
-            return renderList(node, "ordered", options);
+            return options?.cell ? renderListForCell(node, "ordered") : renderList(node, "ordered", options);
         case "taskList":
             return renderList(node, "task", options);
         case "decisionList":
@@ -108,6 +127,12 @@ function renderBlock(node, options) {
             return renderLayoutSection(node, options);
         case "extension":
         case "inlineExtension": {
+            if (options?.cell) {
+                // A block-form fence (or a plugin's diagram fence) can't survive
+                // a cell's single-line flattening, so force the inline sentinel
+                // regardless of node type or plugin match.
+                return macroFenceInline(node);
+            }
             const plugin = options?.plugins?.find((p) => p.detect(node));
             return plugin ? pluginFence(plugin, node) : macroFence(node);
         }
@@ -150,8 +175,14 @@ function renderLayoutSection(node, options) {
 // JSON in a fenced code block (block extensions) or inline code span (inline
 // extensions) -- not meant to be hand-edited, just preserved on round-trip.
 function macroFence(node) {
-    const json = JSON.stringify(node.attrs ?? {});
-    return node.type === "inlineExtension" ? `\`[confluence-macro:${json}]\`` : `\`\`\`confluence-macro\n${json}\n\`\`\``;
+    if (node.type === "inlineExtension") {
+        return macroFenceInline(node);
+    }
+    return `\`\`\`confluence-macro\n${JSON.stringify(node.attrs ?? {})}\n\`\`\``;
+}
+
+function macroFenceInline(node) {
+    return `\`[confluence-macro:${JSON.stringify(node.attrs ?? {})}]\``;
 }
 
 // A macro claimed by a plugin renders as a real fenced block in the plugin's
@@ -224,20 +255,41 @@ function renderList(node, kind, options) {
         .join("\n");
 }
 
-function listMarker(kind, item) {
+// <br>-joined form of a bullet/ordered list for use inside a table cell,
+// where GFM cells can't hold literal newlines. Only "flat" lists (one
+// paragraph per item, no sub-lists) round-trip through this -- anything
+// richer falls back to the normal multi-line render, which the cell's
+// flattening regex then degrades to plain text (same limitation nested
+// Expand already has in a cell).
+function renderListForCell(node, kind) {
+    const items = node.content ?? [];
+    const isFlat = items.every((item) => item.content?.length === 1 && item.content[0].type === "paragraph");
+    if (!isFlat) {
+        return renderList(node, kind, {});
+    }
+    return items.map((item, i) => listMarker(kind, item, i) + renderInline(item.content[0].content)).join("<br>");
+}
+
+function listMarker(kind, item, i) {
     switch (kind) {
         case "task":
             return item.attrs?.state === "DONE" ? "- [x] " : "- [ ] ";
         case "decision":
             return "- [decision] ";
+        case "ordered":
+            return `${i + 1}. `;
         default:
             return "- ";
     }
 }
 
-// Render an ADF table as a GFM pipe table. The first row is treated as the
-// header (GFM requires one). Cell block content is flattened to a single line
-// since GFM cells cannot hold block structure.
+// Render an ADF table as a GFM pipe table. GFM requires a header row
+// (positionally, row 1); ADF marks header cells individually by node type
+// (tableHeader vs tableCell), which can express row headers, column headers,
+// both, or neither. "row" is what a GFM table produces natively and needs no
+// help; the other 3 modes get a sentinel comment so markdownToAdf can restore
+// the exact cell types on the way back in. Cell block content is flattened to
+// a single line since GFM cells cannot hold block structure.
 function renderTable(node, options) {
     const rows = node.content ?? [];
     if (!rows.length) {
@@ -247,11 +299,22 @@ function renderTable(node, options) {
     const columns = (rows[0].content ?? []).length;
     const separator = `| ${Array(columns).fill("---").join(" | ")} |`;
     const body = rows.slice(1).map(renderRow);
-    return [renderRow(rows[0]), separator, ...body].join("\n");
+    const table = [renderRow(rows[0]), separator, ...body].join("\n");
+    const mode = tableHeaderMode(rows);
+    return mode === "row" ? table : `<!-- table:header=${mode} -->\n\n${table}`;
+}
+
+function tableHeaderMode(rows) {
+    const headerRow = (rows[0].content ?? []).every((cell) => cell.type === "tableHeader");
+    const headerColumn = rows.every((row) => row.content?.[0]?.type === "tableHeader");
+    if (headerRow && headerColumn) return "both";
+    if (headerRow) return "row";
+    if (headerColumn) return "column";
+    return "none";
 }
 
 function renderCell(cell, options) {
-    return renderBlocks(cell.content ?? [], options)
+    return renderBlocks(cell.content ?? [], { ...options, cell: true })
         .replace(/\s*\n+\s*/g, " ")
         .replace(/\|/g, "\\|")
         .trim();
@@ -350,6 +413,10 @@ export function markdownToAdf(source, { plugins = [], defaults = {} } = {}) {
     // Set by a `<!-- confluence-plugin {...} -->` sentinel immediately above a
     // fence; consumed (and cleared) by the very next fence/code_block token.
     const pluginState = { pending: null };
+    // Set by a `<!-- table:header=... -->` sentinel immediately above a table;
+    // consumed by the next table_open, applied by its table_close.
+    const tableState = { pending: null };
+    let currentTableHeaderMode = null;
 
     for (const token of tokens) {
         switch (token.type) {
@@ -373,6 +440,8 @@ export function markdownToAdf(source, { plugins = [], defaults = {} } = {}) {
                 break;
             case "table_open":
                 push(stack, { type: "table", content: [] });
+                currentTableHeaderMode = tableState.pending;
+                tableState.pending = null;
                 break;
             case "tr_open":
                 push(stack, { type: "tableRow", content: [] });
@@ -388,22 +457,32 @@ export function markdownToAdf(source, { plugins = [], defaults = {} } = {}) {
                 push(stack, { type: "paragraph", content: [] });
                 break;
             case "th_close":
-            case "td_close":
-                stack.pop(); // paragraph
-                stack.pop(); // cell
+            case "td_close": {
+                const paragraph = stack.pop(); // paragraph
+                const cell = stack.pop(); // cell
+                const list = retypeCellListParagraph(paragraph);
+                cell.content = list ? [list] : [paragraph];
                 break;
+            }
             case "thead_open":
             case "thead_close":
             case "tbody_open":
             case "tbody_close":
                 break; // no ADF equivalent; rows attach directly to the table
+            case "table_close": {
+                const table = stack.pop();
+                if (currentTableHeaderMode) {
+                    applyTableHeaderMode(table, currentTableHeaderMode);
+                }
+                currentTableHeaderMode = null;
+                break;
+            }
             case "paragraph_close":
             case "heading_close":
             case "bullet_list_close":
             case "ordered_list_close":
             case "list_item_close":
             case "blockquote_close":
-            case "table_close":
             case "tr_close":
                 stack.pop();
                 break;
@@ -469,7 +548,7 @@ export function markdownToAdf(source, { plugins = [], defaults = {} } = {}) {
                 }
 
                 const soleText = nodes.length === 1 && nodes[0].type === "text" && !nodes[0].marks ? nodes[0].text : null;
-                if (soleText != null && handleSentinelParagraph(soleText, stack, pluginState)) {
+                if (soleText != null && handleSentinelParagraph(soleText, stack, pluginState, tableState)) {
                     break;
                 }
 
@@ -490,7 +569,7 @@ export function markdownToAdf(source, { plugins = [], defaults = {} } = {}) {
 // wrapper markers -- see the header comment) and perform the corresponding
 // stack surgery instead of emitting it as a normal paragraph. Returns true
 // when the paragraph was consumed as a sentinel.
-function handleSentinelParagraph(text, stack, pluginState) {
+function handleSentinelParagraph(text, stack, pluginState, tableState) {
     if (text === "<details>") {
         discardParagraph(stack);
         push(stack, { type: "expand", attrs: { title: "" }, content: [] });
@@ -536,6 +615,13 @@ function handleSentinelParagraph(text, stack, pluginState) {
         stack.push({ type: "sentinel" });
         return true;
     }
+    const tableHeader = text.match(/^<!-- table:header=(none|column|both) -->$/);
+    if (tableHeader) {
+        discardParagraph(stack);
+        tableState.pending = tableHeader[1];
+        stack.push({ type: "sentinel" });
+        return true;
+    }
     const pluginOpen = text.match(/^<!-- confluence-plugin (.+) -->$/);
     if (pluginOpen) {
         discardParagraph(stack);
@@ -557,6 +643,53 @@ function handleSentinelParagraph(text, stack, pluginState) {
         return true;
     }
     return false;
+}
+
+// GFM parsing always defaults row 1 to tableHeader (see the header comment).
+// Reverse that to match a "table:header=..." sentinel: "none"/"column" strip
+// the row-1 header GFM assumed, "column"/"both" add a header first cell to
+// every row.
+function applyTableHeaderMode(table, mode) {
+    const rows = table.content;
+    if (mode === "none" || mode === "column") {
+        for (const cell of rows[0]?.content ?? []) {
+            cell.type = "tableCell";
+        }
+    }
+    if (mode === "column" || mode === "both") {
+        for (const row of rows) {
+            const first = row.content?.[0];
+            if (first) first.type = "tableHeader";
+        }
+    }
+}
+
+// Reverse of renderListForCell: a cell's sole paragraph, when it's a single
+// plain-text node made of "<br>"-joined "- "/"N. " segments, is really a flat
+// bullet/ordered list -- rebuild it as one. Anything else (marks, mixed
+// content) isn't recognized and stays a plain paragraph.
+function retypeCellListParagraph(paragraph) {
+    const content = paragraph.content ?? [];
+    if (content.length !== 1 || content[0].type !== "text" || content[0].marks) {
+        return null;
+    }
+    const segments = content[0].text.split("<br>");
+    if (segments.length < 2) {
+        return null;
+    }
+    const bullet = segments.every((s) => /^-\s/.test(s));
+    const ordered = !bullet && segments.every((s) => /^\d+\.\s/.test(s));
+    if (!bullet && !ordered) {
+        return null;
+    }
+    const marker = bullet ? /^-\s/ : /^\d+\.\s/;
+    return {
+        type: bullet ? "bulletList" : "orderedList",
+        content: segments.map((s) => ({
+            type: "listItem",
+            content: [{ type: "paragraph", content: [{ type: "text", text: s.replace(marker, "") }] }],
+        })),
+    };
 }
 
 // Remove the paragraph that's currently open on the stack (opened by the
