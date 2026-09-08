@@ -1,6 +1,6 @@
 {
   "name": "ushabti",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI tool for automating little tasks of a software engineer",
   "type": "module",
   "bin": {

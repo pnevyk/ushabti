@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-08
+
 ### Added
 
 - `pr digest --author <login|me>` / `--reviewer <login|me>` / `--commenter <login|me>` to filter the digest to a single user's PRs (mutually exclusive); `me` resolves to the new `github.username` config field.
@@ -31,5 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `config template` and merged project-local/global TOML configuration.
 - `ui estimate` local browser UI for task estimation.
 
-[Unreleased]: https://github.com/pnevyk/ushabti/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/pnevyk/ushabti/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/pnevyk/ushabti/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/pnevyk/ushabti/releases/tag/v0.1.0
