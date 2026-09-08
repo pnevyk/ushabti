@@ -130,8 +130,9 @@ Options:
 
 "me" resolves to the github.username config field.
 
-Note: GitHub search returns at most 1000 results; narrow the window for very
-busy repositories.`,
+Note: GitHub search returns at most 1000 results. If a search matches more,
+the digest is capped at 1000 and a warning is printed to stderr; narrow the
+window for very busy repositories to get a complete digest.`,
     "jira fetch": `Usage: ushabti jira fetch (--project <key> | --id <ticket-id>) [--format json|markdown] [--out <path>]
 
 Fetch a project's Jira tickets, or a single ticket with --id.

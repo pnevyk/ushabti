@@ -26,3 +26,10 @@ export function toGithubError(err, extra = {}) {
     // reference, etc.) -- its own message is surfaced via `cause.message`.
     return new UnexpectedIoError({ service: "github", cause: err, ...extra });
 }
+
+// Pure: true if `err` is the search API's "beyond 1000 results" 422. GitHub
+// errors on page 11+ instead of returning empty/partial pages -- see
+// https://docs.github.com/en/rest/search#about-search
+export function isSearchResultCapError(err) {
+    return httpStatus(err) === 422 && /only the first 1000 search results/i.test(err.message ?? "");
+}

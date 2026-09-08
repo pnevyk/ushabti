@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildSearchQuery, isValidDate, resolveMe, toPrEntry } from "../src/features/pr-digest/service.js";
+import { buildSearchQuery, isValidDate, resolveMe, searchCompletenessWarning, toPrEntry } from "../src/features/pr-digest/service.js";
 import { MissingConfigError } from "../src/shared/errors.js";
 
 test("buildSearchQuery with both bounds", () => {
@@ -56,6 +56,25 @@ test("isValidDate rejects malformed input", () => {
     assert.equal(isValidDate("not-a-date"), false);
     assert.equal(isValidDate(""), false);
     assert.equal(isValidDate("2026-6-1"), false);
+});
+
+test("searchCompletenessWarning returns null when results are complete", () => {
+    assert.equal(searchCompletenessWarning({ totalCount: 5, incompleteResults: false, itemsFetched: 5 }), null);
+});
+
+test("searchCompletenessWarning warns when totalCount exceeds itemsFetched", () => {
+    const warning = searchCompletenessWarning({ totalCount: 1500, incompleteResults: false, itemsFetched: 1000 });
+    assert.match(warning, /1500 PRs but only 1000/);
+});
+
+test("searchCompletenessWarning warns when incompleteResults is true", () => {
+    const warning = searchCompletenessWarning({ totalCount: 5, incompleteResults: true, itemsFetched: 5 });
+    assert.match(warning, /incomplete results/);
+});
+
+test("searchCompletenessWarning prefers the incompleteResults message when both apply", () => {
+    const warning = searchCompletenessWarning({ totalCount: 1500, incompleteResults: true, itemsFetched: 1000 });
+    assert.match(warning, /incomplete results/);
 });
 
 test("toPrEntry maps fields and comment streams", () => {

@@ -1,6 +1,6 @@
 import { InvalidCliInputError, MissingConfigError } from "../../shared/errors.js";
 import { createGithubClient } from "../../shared/github-client.js";
-import { toGithubError } from "../../shared/github-errors.js";
+import { isSearchResultCapError, toGithubError } from "../../shared/github-errors.js";
 import { currentRepo } from "../../shared/git.js";
 import { serialize } from "../../shared/output/json.js";
 import { write } from "../../shared/output/file.js";
@@ -21,11 +21,26 @@ export async function fetchDigest({ since, until, repo, author, reviewer, commen
     const client = createGithubClient(config);
 
     const q = buildSearchQuery({ owner, name, since, until, author, reviewer, commenter });
-    let items;
+    const items = [];
+    let totalCount = 0;
+    let incompleteResults = false;
     try {
-        items = await client.paginate(client.rest.search.issuesAndPullRequests, { q, per_page: 100 });
+        await client.paginate(client.rest.search.issuesAndPullRequests, { q, per_page: 100 }, (response) => {
+            totalCount = response.data.total_count;
+            incompleteResults = incompleteResults || response.data.incomplete_results;
+            items.push(...response.data);
+            return response.data;
+        });
     } catch (err) {
-        throw toGithubError(err, { resource: `${owner}/${name}` });
+        if (!isSearchResultCapError(err)) {
+            throw toGithubError(err, { resource: `${owner}/${name}` });
+        }
+        // Cap hit on page 11+: `items` already holds everything fetched before the 422.
+    }
+
+    const warning = searchCompletenessWarning({ totalCount, incompleteResults, itemsFetched: items.length });
+    if (warning) {
+        console.error(warning);
     }
 
     const pullRequests = [];
@@ -82,6 +97,18 @@ export function buildSearchQuery({ owner, name, since, until, author, reviewer, 
         q += ` commenter:${commenter}`;
     }
     return q;
+}
+
+// Pure: decide whether the search results are truncated/incomplete, and build
+// the warning message if so. Exported for unit testing.
+export function searchCompletenessWarning({ totalCount, incompleteResults, itemsFetched }) {
+    if (incompleteResults) {
+        return "Warning: GitHub search returned incomplete results (the search timed out server-side); the digest may be missing matching PRs. Narrow --since/--until or --repo and retry.";
+    }
+    if (totalCount > itemsFetched) {
+        return `Warning: GitHub search matched ${totalCount} PRs but only ${itemsFetched} could be fetched (GitHub caps search results at 1000); narrow --since/--until for this repository to get a complete digest.`;
+    }
+    return null;
 }
 
 // Pure: resolve the `me` shorthand to the configured GitHub username.

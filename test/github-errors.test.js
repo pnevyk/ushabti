@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toGithubError } from "../src/shared/github-errors.js";
+import { isSearchResultCapError, toGithubError } from "../src/shared/github-errors.js";
 import {
     AuthenticationError,
     PermissionError,
@@ -42,4 +42,19 @@ test("toGithubError preserves the original error as cause", () => {
     const raw = { status: 401, message: "Bad credentials" };
     const err = toGithubError(raw);
     assert.equal(err.cause, raw);
+});
+
+test("isSearchResultCapError matches the search API's 1000-result 422", () => {
+    const err = { status: 422, message: "Only the first 1000 search results are available." };
+    assert.equal(isSearchResultCapError(err), true);
+});
+
+test("isSearchResultCapError rejects other 422s", () => {
+    const err = { status: 422, message: "Validation Failed" };
+    assert.equal(isSearchResultCapError(err), false);
+});
+
+test("isSearchResultCapError rejects other statuses", () => {
+    assert.equal(isSearchResultCapError({ status: 404, message: "Only the first 1000 search results are available." }), false);
+    assert.equal(isSearchResultCapError({}), false);
 });
