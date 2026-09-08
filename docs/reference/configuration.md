@@ -51,6 +51,7 @@ Use least-privilege tokens below — one that can only access what ushabti actua
 | Field | Required | Description |
 |---|---|---|
 | `token` | Yes, for `pr comments` / `pr digest` | A GitHub token, set via `ushabti secrets set` (see [Secrets (tokens)](#secrets-tokens)). A fine-grained personal access token scoped to the specific repositories you run ushabti against, with read-only "Pull requests" access, is enough — no write scope is ever used. |
+| `username` | Yes, for `pr digest --author me` / `--reviewer me` / `--commenter me` / `--comments-by me` | Your GitHub login. Resolves the `me` shorthand so you don't have to type your own login. |
 
 ## `[atlassian]`
 

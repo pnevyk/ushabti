@@ -107,14 +107,28 @@ Examples:
   ushabti pr digest --since 2026-06-01
   ushabti pr digest --since 2026-06-01 --until 2026-06-15
   ushabti pr digest --since 2026-06-01 --repo acme/widget --out sprint.json
+  ushabti pr digest --since 2026-06-01 --author me
+  ushabti pr digest --since 2026-06-01 --reviewer octocat
+  ushabti pr digest --since 2026-06-01 --commenter octocat
+  ushabti pr digest --since 2026-06-01 --author me --comments-by octocat
 
 Options:
-  --since <date>        Window start (required)
-  --until <date>        Window end (default: open-ended)
-  --repo <owner/name>   Repository (default: git origin remote)
-  --out <file>          Output file (default: pr-digest.ushabti.json)
-  --config <file>       Config file path
-  -h, --help            Show this help
+  --since <date>          Window start (required)
+  --until <date>          Window end (default: open-ended)
+  --repo <owner/name>     Repository (default: git origin remote)
+  --author <login|me>     Only PRs authored by this user
+  --reviewer <login|me>   Only PRs reviewed by this user
+  --commenter <login|me>  Only PRs commented on by this user
+                          (--author/--reviewer/--commenter are mutually exclusive)
+  --comments-by <login|me>
+                          Trim each PR's comments (inline and conversation) down to
+                          this user's own. Applies to whichever PRs matched the
+                          above filters (or all of them, with none set).
+  --out <file>            Output file (default: pr-digest.ushabti.json)
+  --config <file>         Config file path
+  -h, --help              Show this help
+
+"me" resolves to the github.username config field.
 
 Note: GitHub search returns at most 1000 results; narrow the window for very
 busy repositories.`,

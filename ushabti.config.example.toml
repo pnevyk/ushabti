@@ -1,5 +1,7 @@
 [github]
 # Use `ushabti secrets set github` for setting your GitHub token.
+# Your GitHub login, used to resolve `me` in `pr digest --author`/`--reviewer`/`--commenter`/`--comments-by`. Optional.
+username = ""
 
 # Shared Atlassian Cloud credentials, used by both jira and confluence commands.
 [atlassian]

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `pr digest --author <login|me>` / `--reviewer <login|me>` / `--commenter <login|me>` to filter the digest to a single user's PRs (mutually exclusive); `me` resolves to the new `github.username` config field.
+- `pr digest --comments-by <login|me>` to trim each returned PR's comments/review comments down to a single user's; combines with `--author`/`--reviewer`/`--commenter`.
+
 ### Fixed
 
 - Confluence table round-trip: a table with no header row/column no longer gains one on re-upload (records header row/column/both/none via a `<!-- table:header=... -->` sentinel), a flat bullet/ordered list in a table cell no longer collapses into broken hyphens, and a macro (e.g. table of contents) in a table cell no longer comes back as raw JSON text.
