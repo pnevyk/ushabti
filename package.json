@@ -12,7 +12,8 @@
   "scripts": {
     "start": "node bin/ushabti.js",
     "test": "node --test",
-    "prepublishOnly": "npm test"
+    "prepublishOnly": "npm test",
+    "prepare-release": "node scripts/prepare-release.js"
   },
   "files": [
     "bin",
