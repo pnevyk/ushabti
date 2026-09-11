@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toPage, toFolder, groupByParent, pruneTree, matchAttachmentByFileId } from "../src/features/confluence-download/service.js";
+import { toPage, toFolder, groupByParent, pruneTree } from "../src/features/confluence-download/service.js";
+import { matchAttachmentByFileId } from "../src/shared/confluence-media.js";
 
 const adf = (text) => JSON.stringify({ version: 1, type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] });
 
