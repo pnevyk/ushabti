@@ -18,6 +18,7 @@ Commands:
   jira filter            Filter locally fetched tickets by a JS expression
   jira template          Print an example ticket markdown file
   confluence download    Fetch a Confluence page to JSON or markdown
+  confluence comments    Fetch a page's footer and inline comments to JSON or markdown
   confluence create      Create a Confluence page from a markdown file
   confluence upload      Update a Confluence page from a markdown file
   confluence template    Print an example page markdown file
@@ -297,6 +298,35 @@ Options:
                            Default: <title>-<id>.md or <title>-<id>.ushabti.json
                            Default with --children: confluence-<id>/
   --children               Also download every descendant, as a directory tree
+  --config <file>          Config file path
+  -h, --help               Show this help`,
+    "confluence comments": `Usage: ushabti confluence comments --id <pageId> [--format json|markdown] [--out <path>]
+
+Fetch a single Confluence page's footer and inline comment threads, each with
+its full reply chain.
+
+Each thread carries kind (footer or inline), resolutionStatus (inline only:
+dangling/open/reopened/resolved), selection (the highlighted text an inline
+thread is anchored to, inline only) and comments: an array of { authorId,
+createdAt, body }, root first then replies in chronological order. authorId
+is the raw accountId -- Confluence's API has no display name here, unlike
+Jira's. body is rendered from ADF to markdown. Default format is markdown:
+threads merged into chronological order (by root comment), each opening with
+"- Type:"/"- Status:" bullets and its comments as "## Author:" sections,
+separated by "---" rules. Pass --format json for a single {threads:[...]}
+file instead.
+
+Examples:
+  ushabti confluence comments --id 12345
+  ushabti confluence comments --id 12345 --format json
+  ushabti confluence comments --id 12345 --out thread.md
+
+Options:
+  --id <pageId>            Confluence page id (required)
+  --format json|markdown   Output format (default: markdown)
+  --out <path>             Output file
+                           Default: confluence-<id>-comments.md or
+                           confluence-<id>-comments.ushabti.json
   --config <file>          Config file path
   -h, --help               Show this help`,
     "confluence create": `Usage: ushabti confluence create --space <key> --file <markdown> [--update]

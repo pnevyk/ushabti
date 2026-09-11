@@ -14,6 +14,7 @@ import * as jiraUpdate from "../features/jira-update/command.js";
 import * as jiraFilter from "../features/jira-filter/command.js";
 import * as jiraTemplate from "../features/jira-template/command.js";
 import * as confluenceDownload from "../features/confluence-download/command.js";
+import * as confluenceComments from "../features/confluence-comments/command.js";
 import * as confluenceCreate from "../features/confluence-create/command.js";
 import * as confluenceUpload from "../features/confluence-upload/command.js";
 import * as confluenceTemplate from "../features/confluence-template/command.js";
@@ -35,6 +36,7 @@ const commands = {
     "jira filter": jiraFilter,
     "jira template": jiraTemplate,
     "confluence download": confluenceDownload,
+    "confluence comments": confluenceComments,
     "confluence create": confluenceCreate,
     "confluence upload": confluenceUpload,
     "confluence template": confluenceTemplate,

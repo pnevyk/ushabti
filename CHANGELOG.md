@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `confluence comments` command to download a page's footer and inline comments as markdown or JSON.
+
 ## [0.1.1] - 2026-09-08
 
 ### Added
