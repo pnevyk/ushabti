@@ -67,14 +67,21 @@ Shared by every `jira` and `confluence` command.
 
 | Field | Required | Description |
 |---|---|---|
+| `project` | No | Default Jira project key, e.g. `"ABC"`. Used by `jira fetch`, `create`, `project` and `filter` when no project is given and none can be derived from a ticket id. |
 | `storyPointsField` | No | Custom field id backing story points, e.g. `"customfield_10026"`. Without it, `storyPoints` in ticket frontmatter is silently ignored on create/update, and omitted on fetch. |
 | `sprintField` | No | Custom field id backing sprint, e.g. `"customfield_10020"`. Same behavior as `storyPointsField` when unset. |
 
-Both are per-project custom field ids, not fixed across Jira sites — find them under your Jira site's custom fields administration, or via the Jira REST API's `/rest/api/3/field` endpoint (search the response for a field whose `name` matches, e.g. "Story point estimate" or "Sprint").
+`storyPointsField` and `sprintField` are per-project custom field ids, not fixed across Jira sites — find them under your Jira site's custom fields administration, or via the Jira REST API's `/rest/api/3/field` endpoint (search the response for a field whose `name` matches, e.g. "Story point estimate" or "Sprint").
 
-`jira project --project <key>` resolves the *values* these fields take (people's account ids for `assignee`, numeric sprint ids for `sprint`) — it doesn't discover the field ids themselves.
+`jira project <key>` resolves the *values* these fields take (people's account ids for `assignee`, numeric sprint ids for `sprint`) — it doesn't discover the field ids themselves.
 
 With `sprintField` configured, `jira fetch`'s markdown/JSON output also carries a ticket's past sprint ids as `sprintHistory` (present only when the ticket has moved through more than one sprint) alongside its current `sprint`.
+
+## `[confluence]`
+
+| Field | Required | Description |
+|---|---|---|
+| `space` | No | Default Confluence space key, e.g. `"ENG"`. Used by `confluence create` when no space is given. |
 
 ## `[confluence.plugins]`
 

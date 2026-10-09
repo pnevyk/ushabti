@@ -5,7 +5,7 @@ Make the same kind of edit across many Jira tickets at once — e.g. re-triage a
 ## 1. Fetch every ticket in the project
 
 ```sh
-ushabti jira fetch --project ABC
+ushabti jira fetch ABC
 ```
 
 Writes `jira-ABC/`, one `<ID>.md` file per ticket.
@@ -13,7 +13,7 @@ Writes `jira-ABC/`, one `<ID>.md` file per ticket.
 ## 2. Optionally, look up people and sprint ids
 
 ```sh
-ushabti jira project --project ABC
+ushabti jira project ABC
 ```
 
 Needed if your batch edit touches `assignee` or `sprint`, since both take ids, not names.
@@ -21,7 +21,7 @@ Needed if your batch edit touches `assignee` or `sprint`, since both take ids, n
 ## 3. Narrow down which tickets to touch, if needed
 
 ```sh
-ushabti jira filter --project ABC --where 'type === "Story" && !parent'
+ushabti jira filter ABC --where 'type === "Story" && !parent'
 ```
 
 Prints the matching ticket ids, one per line — parentless stories, in this example. Skip this step if the edit applies to every ticket you fetched.
@@ -36,7 +36,7 @@ Point your agent at `jira-ABC/` (or just the filtered subset of files) and descr
 
 ```sh
 for f in jira-ABC/*.md; do
-  ushabti jira update --file "$f"
+  ushabti jira update "$f"
 done
 ```
 
@@ -48,6 +48,6 @@ If the batch edit involved drafting brand-new tickets (see [Create a ticket](cre
 
 ```sh
 for f in jira-ABC/new-*.md; do
-  ushabti jira create --project ABC --file "$f" --update
+  ushabti jira create "$f" ABC --update
 done
 ```

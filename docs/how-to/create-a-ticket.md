@@ -15,7 +15,7 @@ Prints an example ticket with `title` and `type` filled in and every optional fi
 If you'll assign the ticket or put it in a sprint, you need account ids and sprint ids, not names:
 
 ```sh
-ushabti jira project --project ABC
+ushabti jira project ABC
 ```
 
 Writes a YAML file mapping display names to the ids used by `assignee` and `sprint`.
@@ -31,8 +31,10 @@ Edit `new-ticket.md`: uncomment and fill in whichever optional fields apply (`pa
 ## 5. Create it
 
 ```sh
-ushabti jira create --project ABC --file new-ticket.md --update
+ushabti jira create new-ticket.md ABC --update
 ```
+
+The project key (`ABC`) can be left out if you set a default `project` under `[jira]` in the config — see the [configuration reference](../reference/configuration.md#jira).
 
 `--update` writes the newly created key into the file's frontmatter and renames it to `<KEY>.md`, so it's ready for step 6 without any manual bookkeeping. Without `--update`, the ticket is still created — you'd just be responsible for tracking the key yourself.
 
@@ -41,7 +43,7 @@ ushabti jira create --project ABC --file new-ticket.md --update
 Once a ticket file has an `id` in frontmatter (from `--update` above, or from `jira fetch --format markdown`), edit the file and push the change back:
 
 ```sh
-ushabti jira update --file ABC-123.md
+ushabti jira update ABC-123.md
 ```
 
 Only the fields present in frontmatter are updated; everything else on the ticket is left alone.

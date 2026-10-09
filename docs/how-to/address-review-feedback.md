@@ -20,7 +20,7 @@ Before fetching, skim the PR in the GitHub UI and reply directly on any thread w
 ushabti pr comments
 ```
 
-This writes `pr-comments.ushabti.json`: every unresolved review thread on the branch's open PR, each with its file, diff hunk, and comment history (including any replies from step 2). Pass `--all` to include already-resolved threads, or `--pr <n>` / `--repo <owner/name>` if the branch/PR/repo needs to be explicit.
+This writes `pr-comments.ushabti.json`: every unresolved review thread on the branch's open PR, each with its file, diff hunk, and comment history (including any replies from step 2). Pass `--all` to include already-resolved threads, or a PR number or URL (`ushabti pr comments 42`) / `--repo <owner/name>` if the branch/PR/repo needs to be explicit.
 
 ## 4. Hand it to your agent
 

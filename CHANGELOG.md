@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `confluence comments` command to download a page's footer and inline comments as markdown or JSON.
+- Positional arguments for each command's main subject: `jira fetch ABC-123` / `jira fetch ABC`, `jira comments ABC-123`, `jira create ticket.md [ABC]`, `jira update ABC-123.md`, `jira project [ABC]`, `jira filter [ABC]`, `confluence download|comments <id>`, `confluence create page.md [ENG]`, `confluence upload page.md`, `pr comments [<n>]`.
+- Jira, Confluence and GitHub URLs are accepted wherever a ticket, page, space or PR is expected (a PR URL also supplies `--repo`).
+- Optional `[jira] project` and `[confluence] space` config fields, used when no project/space is given.
+- `jira filter` accepts `--config`.
+- Upgrade guide: `docs/upgrading/0.2.0.md`.
+
+### Changed
+
+- `jira fetch <ticket-id>` derives the project from the ticket id; a redundant `--project` is ignored with a warning.
+- Deprecated, still working with a warning on stderr: `--id`, `--file`, `--pr`, `--project` and `--space` (use the positional arguments instead; see the upgrade guide).
 
 ## [0.1.1] - 2026-09-08
 

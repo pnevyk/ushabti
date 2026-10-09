@@ -53,7 +53,7 @@ It performs each chore as a narrow, auditable operation with scoped credentials 
 
 - Reads produce a plain local file (JSON or markdown).
   The agent reasons over the file, not over a live API.
-- Writes go through explicit, single-purpose commands whose input is a file you can review before it runs (`jira create --file ticket.md`).
+- Writes go through explicit, single-purpose commands whose input is a file you can review before it runs (`jira create ticket.md`).
 
 The boundary is simple.
 ushabti does the I/O with controlled access; the agent does the thinking over local files.
