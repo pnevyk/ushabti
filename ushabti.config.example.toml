@@ -10,10 +10,17 @@ email = ""
 # Use `ushabti secrets set atlassian` for setting your Atlassian token.
 
 [jira]
+# Default project key, used when a command is not given one (and it can't be derived
+# from a ticket id), e.g. "ABC". Optional.
+project = ""
 # Custom field id for story points, e.g. "customfield_10026". Optional.
 storyPointsField = ""
 # Custom field id for sprint, e.g. "customfield_10020". Optional.
 sprintField = ""
+
+[confluence]
+# Default space key, used when `confluence create` is not given one, e.g. "ENG". Optional.
+space = ""
 
 [confluence.plugins]
 # Default producer for mermaid diagrams, keyed by fence language. Only needed

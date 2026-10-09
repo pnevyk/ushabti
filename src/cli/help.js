@@ -10,7 +10,7 @@ Commands:
   secrets list           List stored tokens and clean up broken scopes
   pr comments            Fetch unresolved PR review threads to JSON
   pr digest              Fetch merged-PR history in a date window to JSON
-  jira fetch             Fetch a project's tickets to JSON or markdown
+  jira fetch             Fetch a ticket or a project's tickets to JSON or markdown
   jira comments          Fetch a ticket's comments to JSON or markdown
   jira project           Fetch a project's people and sprints to a YAML reference file
   jira create            Create a Jira ticket from a markdown file
@@ -79,20 +79,25 @@ interactively to be prompted to delete each broken scope's secrets.
 
 Options:
   -h, --help    Show this help`,
-    "pr comments": `Usage: ushabti pr comments [--pr <n>] [--repo <owner/name>] [--out <file>] [--all]
+    "pr comments": `Usage: ushabti pr comments [<pr-number|url>] [--repo <owner/name>] [--out <file>] [--all]
 
 Fetch unresolved review comment threads on a PR into a JSON file.
 
 Examples:
   ushabti pr comments                                  current branch's open PR
-  ushabti pr comments --pr 42 --all                    specific PR, include resolved
+  ushabti pr comments 42 --all                         specific PR, include resolved
+  ushabti pr comments https://github.com/acme/widget/pull/42
   ushabti pr comments --repo acme/widget --out cr.json
 
+Arguments:
+  <pr-number|url>       PR number, or a GitHub PR URL (which also gives the
+                        repository). Default: open PR for the current branch
+
 Options:
-  --pr <n>              PR number (default: open PR for the current branch)
-  --repo <owner/name>   Repository (default: git origin remote)
+  --repo <owner/name>   Repository (default: from the PR URL, else git origin remote)
   --out <file>          Output file (default: pr-comments.ushabti.json)
   --all                 Include resolved threads (default: unresolved only)
+  --pr <n>              (deprecated) Use the <pr-number> argument instead
   --config <file>       Config file path
   -h, --help            Show this help`,
     "pr digest": `Usage: ushabti pr digest --since <date> [--until <date>] [--repo <owner/name>] [--out <file>]
@@ -134,33 +139,39 @@ Options:
 Note: GitHub search returns at most 1000 results. If a search matches more,
 the digest is capped at 1000 and a warning is printed to stderr; narrow the
 window for very busy repositories to get a complete digest.`,
-    "jira fetch": `Usage: ushabti jira fetch (--project <key> | --id <ticket-id>) [--format json|markdown] [--out <path>]
+    "jira fetch": `Usage: ushabti jira fetch [<ticket-id|project-key>] [--format json|markdown] [--out <path>]
 
-Fetch a project's Jira tickets, or a single ticket with --id.
+Fetch a single Jira ticket, or all tickets of a project.
 
-With --id, the ticket key already implies its project, so --project is not
-required (and is ignored).
+The argument is a ticket id (ABC-123), a project key (ABC), or a Jira URL
+containing either (e.g. https://acme.atlassian.net/browse/ABC-123). A ticket id
+already implies its project. Without an argument, the project is read from the
+\`project\` field under [jira] in the config.
 
 Default format is markdown: one <ID>.md per ticket, YAML frontmatter (id,
 title, type, parent, storyPoints, assignee) plus the description body. Pass
 --format json for a single {tickets:[...]} file instead.
 
 Examples:
-  ushabti jira fetch --project ABC
-  ushabti jira fetch --project ABC --id ABC-123
-  ushabti jira fetch --project ABC --format json
-  ushabti jira fetch --project ABC --id ABC-123 --format json
+  ushabti jira fetch ABC
+  ushabti jira fetch ABC-123
+  ushabti jira fetch ABC --format json
+  ushabti jira fetch https://acme.atlassian.net/browse/ABC-123 --format json
+
+Arguments:
+  <ticket-id|project-key>  Ticket to fetch, or project whose tickets to fetch
+                           (default: [jira] project from the config)
 
 Options:
-  --project <key>          Jira project key (required unless --id is given)
-  --id <ticket-id>         Fetch only this ticket (e.g. ABC-123) instead of all
   --format json|markdown   Output format (default: markdown)
   --out <path>             Output directory (markdown) or file (json)
                            Default (project): jira-<project>/ or jira-<project>.ushabti.json
-                           Default (--id): <id>.md or jira-<id>.ushabti.json in cwd
+                           Default (ticket): <id>.md or jira-<id>.ushabti.json in cwd
+  --id <ticket-id>         (deprecated) Use the <ticket-id> argument instead
+  --project <key>          (deprecated) Use the <project-key> argument instead
   --config <file>          Config file path
   -h, --help               Show this help`,
-    "jira comments": `Usage: ushabti jira comments --id <ticket-key> [--format json|markdown] [--out <path>]
+    "jira comments": `Usage: ushabti jira comments <ticket-id> [--format json|markdown] [--out <path>]
 
 Fetch all comments of a single Jira ticket.
 
@@ -170,18 +181,22 @@ one file with a section per comment. Pass --format json for a single
 {comments:[...]} file instead.
 
 Examples:
-  ushabti jira comments --id ABC-123
-  ushabti jira comments --id ABC-123 --format json
-  ushabti jira comments --id ABC-123 --out thread.md
+  ushabti jira comments ABC-123
+  ushabti jira comments ABC-123 --format json
+  ushabti jira comments https://acme.atlassian.net/browse/ABC-123 --out thread.md
+
+Arguments:
+  <ticket-id>              Ticket to fetch comments for, e.g. ABC-123, or its
+                           Jira URL (required)
 
 Options:
-  --id <ticket-key>        Ticket to fetch comments for, e.g. ABC-123 (required)
   --format json|markdown   Output format (default: markdown)
   --out <path>             Output file
                            Default: <id>-comments.md or jira-<id>-comments.ushabti.json
+  --id <ticket-id>         (deprecated) Use the <ticket-id> argument instead
   --config <file>          Config file path
   -h, --help               Show this help`,
-    "jira project": `Usage: ushabti jira project --project <key> [--out <file>]
+    "jira project": `Usage: ushabti jira project [<project-key>] [--out <file>]
 
 Fetch a project's assignable people and its boards' sprints into a YAML file,
 mapping human-readable names to the ids used by the assignee and sprint fields.
@@ -189,34 +204,48 @@ mapping human-readable names to the ids used by the assignee and sprint fields.
 People list accountIds (for the assignee field). Boards each nest their sprints
 (all states) listing numeric sprint ids (for the sprint field).
 
+Without an argument, the project is read from the \`project\` field under
+[jira] in the config.
+
 Examples:
-  ushabti jira project --project ABC
-  ushabti jira project --project ABC --out people.yaml
+  ushabti jira project ABC
+  ushabti jira project ABC --out people.yaml
+
+Arguments:
+  <project-key>       Jira project key (default: [jira] project from the config)
 
 Options:
-  --project <key>     Jira project key (required)
   --out <file>        Output file (default: jira-<project>.ushabti.yaml)
+  --project <key>     (deprecated) Use the <project-key> argument instead
   --config <file>     Config file path
   -h, --help          Show this help`,
-    "jira create": `Usage: ushabti jira create --project <key> --file <markdown> [--update]
+    "jira create": `Usage: ushabti jira create <markdown> [<project-key>] [--update]
 
 Create a Jira ticket from a markdown file with YAML frontmatter.
 
 Frontmatter: title (required), type (required), parent, storyPoints, assignee
 (accountId) optional. The body becomes the ticket description.
 
+The project is the second argument, or the \`project\` field under [jira] in
+the config when omitted.
+
 Examples:
-  ushabti jira create --project ABC --file ticket.md
-  ushabti jira create --project ABC --file ticket.md --update
+  ushabti jira create ticket.md ABC
+  ushabti jira create ticket.md ABC --update
+  ushabti jira create ticket.md            project from config
+
+Arguments:
+  <markdown>          Markdown file describing the ticket (required)
+  <project-key>       Jira project key (default: [jira] project from the config)
 
 Options:
-  --project <key>     Jira project key (required)
-  --file <markdown>   Markdown file describing the ticket (required)
   --update            After creation, write id into frontmatter and rename
                       the file to <KEY>.md
+  --file <markdown>   (deprecated) Use the <markdown> argument instead
+  --project <key>     (deprecated) Use the <project-key> argument instead
   --config <file>     Config file path
   -h, --help          Show this help`,
-    "jira update": `Usage: ushabti jira update --file <markdown>
+    "jira update": `Usage: ushabti jira update <markdown>
 
 Update an existing Jira ticket from a markdown file with YAML frontmatter.
 
@@ -228,33 +257,40 @@ Frontmatter: id (required), title, type, parent, storyPoints, assignee
 (accountId) optional. The body becomes the ticket description.
 
 Examples:
-  ushabti jira update --file ABC-123.md
+  ushabti jira update ABC-123.md
+
+Arguments:
+  <markdown>          Markdown file describing the update (required)
 
 Options:
-  --file <markdown>   Markdown file describing the update (required)
+  --file <markdown>   (deprecated) Use the <markdown> argument instead
   --config <file>     Config file path
   -h, --help          Show this help`,
-    "jira filter": `Usage: ushabti jira filter (--project <key> | --in <path>) [--where <expr>]
+    "jira filter": `Usage: ushabti jira filter [<project-key>] [--in <path>] [--where <expr>]
 
 Filter locally fetched tickets and print matching ticket ids, one per line.
 
 Reads tickets from --in (a JSON file or a markdown directory, detected
-automatically). Without --in, --project is required to derive the default
-input: jira-<project>.ushabti.json, then jira-<project>/.
+automatically). Without --in, the project (argument, or [jira] project from the
+config) derives the default input: jira-<project>.ushabti.json, then
+jira-<project>/.
 
 --where is a JavaScript expression evaluated per ticket; the ticket passes
 when it is truthy. Omit --where to print every ticket. These fields are in
 scope as variables: id, title, type, parent, assignee, storyPoints.
 
 Examples:
-  ushabti jira filter --project ABC --where '!parent'
-  ushabti jira filter --project ABC --where 'type === "Epic" && storyPoints > 3'
-  ushabti jira filter --project ABC --in ./tickets
+  ushabti jira filter ABC --where '!parent'
+  ushabti jira filter ABC --where 'type === "Epic" && storyPoints > 3'
+  ushabti jira filter --in ./tickets
+
+Arguments:
+  <project-key>     Jira project key (not needed with --in)
 
 Options:
-  --project <key>   Jira project key (required unless --in is given)
   --in <path>       JSON file or markdown directory (default: project-derived)
   --where <expr>    JavaScript filter expression (default: match all)
+  --project <key>   (deprecated) Use the <project-key> argument instead
   --config <file>   Config file path
   -h, --help        Show this help
 
@@ -268,7 +304,7 @@ new ticket: \`ushabti jira template > ticket.md\`.
 
 Options:
   -h, --help    Show this help`,
-    "confluence download": `Usage: ushabti confluence download --id <pageId> [--format json|markdown] [--out <path>] [--children]
+    "confluence download": `Usage: ushabti confluence download <page-id|url> [--format json|markdown] [--out <path>] [--children]
 
 Fetch a single Confluence page's content (as Atlas Document Format, converted
 to markdown) to a local file.
@@ -287,20 +323,24 @@ Descendants of an unsupported type (whiteboard, database, embed, ...) are
 skipped, along with their own descendants, and reported on stderr.
 
 Examples:
-  ushabti confluence download --id 12345
-  ushabti confluence download --id 12345 --format json
-  ushabti confluence download --id 12345 --children
+  ushabti confluence download 12345
+  ushabti confluence download 12345 --format json
+  ushabti confluence download 12345 --children
+  ushabti confluence download https://acme.atlassian.net/wiki/spaces/ENG/pages/12345/Title
+
+Arguments:
+  <page-id|url>            Confluence page or folder id, or its URL (required)
 
 Options:
-  --id <pageId>            Confluence page or folder id (required)
   --format json|markdown   Output format (default: markdown)
   --out <path>             Output file, or output directory with --children
                            Default: <title>-<id>.md or <title>-<id>.ushabti.json
                            Default with --children: confluence-<id>/
   --children               Also download every descendant, as a directory tree
+  --id <pageId>            (deprecated) Use the <page-id|url> argument instead
   --config <file>          Config file path
   -h, --help               Show this help`,
-    "confluence comments": `Usage: ushabti confluence comments --id <pageId> [--format json|markdown] [--out <path>]
+    "confluence comments": `Usage: ushabti confluence comments <page-id|url> [--format json|markdown] [--out <path>]
 
 Fetch a single Confluence page's footer and inline comment threads, each with
 its full reply chain.
@@ -317,19 +357,22 @@ separated by "---" rules. Pass --format json for a single {threads:[...]}
 file instead.
 
 Examples:
-  ushabti confluence comments --id 12345
-  ushabti confluence comments --id 12345 --format json
-  ushabti confluence comments --id 12345 --out thread.md
+  ushabti confluence comments 12345
+  ushabti confluence comments 12345 --format json
+  ushabti confluence comments 12345 --out thread.md
+
+Arguments:
+  <page-id|url>            Confluence page id, or its URL (required)
 
 Options:
-  --id <pageId>            Confluence page id (required)
   --format json|markdown   Output format (default: markdown)
   --out <path>             Output file
                            Default: confluence-<id>-comments.md or
                            confluence-<id>-comments.ushabti.json
+  --id <pageId>            (deprecated) Use the <page-id|url> argument instead
   --config <file>          Config file path
   -h, --help               Show this help`,
-    "confluence create": `Usage: ushabti confluence create --space <key> --file <markdown> [--update]
+    "confluence create": `Usage: ushabti confluence create <markdown> [<space-key>] [--update]
 
 Create a new Confluence page from a markdown file with YAML frontmatter.
 
@@ -337,18 +380,26 @@ Frontmatter: title (required), parentId (optional, a page id to nest under),
 type (optional, "page" (default) or "live" to create a live doc). The body
 becomes the page content.
 
+The space is the second argument (a key, or a URL under /spaces/<KEY>/), or the
+\`space\` field under [confluence] in the config when omitted.
+
 Examples:
-  ushabti confluence create --space ENG --file page.md
-  ushabti confluence create --space ENG --file page.md --update
+  ushabti confluence create page.md ENG
+  ushabti confluence create page.md ENG --update
+  ushabti confluence create page.md        space from config
+
+Arguments:
+  <markdown>          Markdown file describing the page (required)
+  <space-key>         Confluence space key (default: [confluence] space from the config)
 
 Options:
-  --space <key>       Confluence space key (required)
-  --file <markdown>   Markdown file describing the page (required)
   --update            After creation, write id into frontmatter and rename
                       the file to <id>.md
+  --file <markdown>   (deprecated) Use the <markdown> argument instead
+  --space <key>       (deprecated) Use the <space-key> argument instead
   --config <file>     Config file path
   -h, --help          Show this help`,
-    "confluence upload": `Usage: ushabti confluence upload --file <markdown>
+    "confluence upload": `Usage: ushabti confluence upload <markdown>
 
 Update an existing Confluence page from a markdown file with YAML frontmatter.
 
@@ -362,10 +413,13 @@ frontmatter. type is not supported here -- a page's subtype (page vs. live
 doc) can't be changed after creation.
 
 Examples:
-  ushabti confluence upload --file 12345.md
+  ushabti confluence upload 12345.md
+
+Arguments:
+  <markdown>          Markdown file describing the update (required)
 
 Options:
-  --file <markdown>   Markdown file describing the update (required)
+  --file <markdown>   (deprecated) Use the <markdown> argument instead
   --config <file>     Config file path
   -h, --help          Show this help`,
     "confluence template": `Usage: ushabti confluence template

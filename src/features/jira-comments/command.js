@@ -1,13 +1,16 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
 import { InvalidCliInputError } from "../../shared/errors.js";
+import { expectPositionals, parseJiraRef, pickSubject } from "../../shared/cli-args.js";
 import { fetchComments } from "./service.js";
 
 const FORMATS = ["json", "markdown"];
+const USAGE = "ushabti jira comments <ticket-id> [--format json|markdown] [--out <path>]";
 
 export async function run(argv) {
-    const { values } = parseArgs({
+    const { values, positionals } = parseArgs({
         args: argv,
+        allowPositionals: true,
         options: {
             id: { type: "string" },
             format: { type: "string" },
@@ -16,18 +19,30 @@ export async function run(argv) {
         },
     });
 
-    if (!values.id) {
-        throw new InvalidCliInputError("A ticket key is required to fetch its comments. Use --id <ticket-key>, e.g. --id ABC-123.");
-    }
+    const id = resolveId({ values, positionals });
 
     const format = values.format ?? "markdown";
     if (!FORMATS.includes(format)) {
         throw new InvalidCliInputError(`${format} is not a valid value for --format. Use one of: ${FORMATS.join(", ")}.`);
     }
 
-    const out = values.out ?? defaultOut(values.id, format);
+    const out = values.out ?? defaultOut(id, format);
     const config = loadConfig(values.config);
-    await fetchComments({ id: values.id, format, out, config });
+    await fetchComments({ id, format, out, config });
+}
+
+export function resolveId({ values, positionals }) {
+    expectPositionals(positionals, 1, USAGE);
+    const id = pickSubject({
+        positional: positionals[0] != null ? parseJiraRef(positionals[0]) : undefined,
+        flagValue: values.id,
+        flagName: "--id",
+        hint: "Pass the ticket id as an argument: ushabti jira comments ABC-123.",
+    });
+    if (!id) {
+        throw new InvalidCliInputError("A ticket key is required to fetch its comments. Use `ushabti jira comments <ticket-id>`, e.g. ABC-123.");
+    }
+    return id;
 }
 
 function defaultOut(id, format) {

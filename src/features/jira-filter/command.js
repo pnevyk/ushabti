@@ -1,23 +1,32 @@
 import { parseArgs } from "node:util";
 import { existsSync } from "node:fs";
+import { loadConfig } from "../../shared/config.js";
 import { InvalidCliInputError } from "../../shared/errors.js";
+import { expectPositionals, parseJiraRef, pickSubject, resolveProject } from "../../shared/cli-args.js";
 import { filterTickets } from "./service.js";
 
 export async function run(argv) {
-    const { values } = parseArgs({
+    const { values, positionals } = parseArgs({
         args: argv,
+        allowPositionals: true,
         options: {
             project: { type: "string" },
             in: { type: "string" },
             where: { type: "string" },
+            config: { type: "string" },
         },
     });
 
-    if (!values.project && !values.in) {
-        throw new InvalidCliInputError("A project key or an --in path is required to filter tickets. Use --project <key> or --in <path>.");
-    }
+    expectPositionals(positionals, 1, "ushabti jira filter [<project-key>] [--in <path>] [--where <expr>]");
+    const explicit = pickSubject({
+        positional: positionals[0] != null ? parseJiraRef(positionals[0]) : undefined,
+        flagValue: values.project,
+        flagName: "--project",
+        hint: "Pass the project key as an argument (ushabti jira filter ABC), or set `project` under [jira] in the config.",
+    });
 
-    const inPath = values.in ?? defaultIn(values.project);
+    // The project only locates the default input, so it's not needed with --in.
+    const inPath = values.in ?? defaultIn(resolveProject({ explicit, config: explicit ? undefined : loadConfig(values.config) }));
     const names = await filterTickets({ inPath, where: values.where });
     for (const name of names) {
         console.log(name);
