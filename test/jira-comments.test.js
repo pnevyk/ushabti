@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toComment, toMarkdown } from "../src/features/jira-comments/service.js";
+import { toComment, toMarkdown } from "../src/features/jira-fetch/comments.js";
 
 const adf = (text) => ({ version: 1, type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] });
 
