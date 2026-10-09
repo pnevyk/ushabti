@@ -5,7 +5,7 @@ import { nextCursor, resolvePageMedia } from "../../shared/confluence-media.js";
 import { adfToMarkdown } from "../../shared/adf.js";
 import { serialize } from "../../shared/output/json.js";
 import { write } from "../../shared/output/file.js";
-import { findMediaIds, rewriteMediaLinks, downloadMedia } from "../../shared/media-download.js";
+import { findMediaIds, rewriteMediaLinks, downloadMedia, warnMediaSkipped } from "../../shared/media-download.js";
 import { toConfluenceError } from "../../shared/confluence-errors.js";
 import { plugins } from "../../plugins/index.js";
 
@@ -31,7 +31,11 @@ export async function fetchComments({ id, format, out, config }) {
         (a.comments[0]?.createdAt ?? "").localeCompare(b.comments[0]?.createdAt ?? ""),
     );
 
-    await downloadThreadsMedia(client, id, threads, dirname(out), credentials);
+    if (out.kind === "stdout") {
+        warnMediaSkipped(`page ${id}`, [...new Set(threads.flatMap((t) => t.comments).flatMap((c) => findMediaIds(c.body)))]);
+    } else {
+        await downloadThreadsMedia(client, id, threads, dirname(out.path), credentials);
+    }
 
     if (format === "markdown") {
         await write(out, toMarkdown(id, threads));

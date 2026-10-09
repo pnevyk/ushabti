@@ -96,6 +96,7 @@ Arguments:
 Options:
   --repo <owner/name>   Repository (default: from the PR URL, else git origin remote)
   --out <file>          Output file (default: pr-comments.ushabti.json)
+                      Use - to print to stdout instead (attachments are skipped)
   --all                 Include resolved threads (default: unresolved only)
   --pr <n>              (deprecated) Use the <pr-number> argument instead
   --config <file>       Config file path
@@ -131,6 +132,7 @@ Options:
                           this user's own. Applies to whichever PRs matched the
                           above filters (or all of them, with none set).
   --out <file>            Output file (default: pr-digest.ushabti.json)
+                        Use - to print to stdout instead (attachments are skipped)
   --config <file>         Config file path
   -h, --help              Show this help
 
@@ -167,6 +169,7 @@ Options:
   --out <path>             Output directory (markdown) or file (json)
                            Default (project): jira-<project>/ or jira-<project>.ushabti.json
                            Default (ticket): <id>.md or jira-<id>.ushabti.json in cwd
+                           Use - to print to stdout instead (attachments are skipped)
   --id <ticket-id>         (deprecated) Use the <ticket-id> argument instead
   --project <key>          (deprecated) Use the <project-key> argument instead
   --config <file>          Config file path
@@ -193,6 +196,7 @@ Options:
   --format json|markdown   Output format (default: markdown)
   --out <path>             Output file
                            Default: <id>-comments.md or jira-<id>-comments.ushabti.json
+                           Use - to print to stdout instead (attachments are skipped)
   --id <ticket-id>         (deprecated) Use the <ticket-id> argument instead
   --config <file>          Config file path
   -h, --help               Show this help`,
@@ -216,6 +220,7 @@ Arguments:
 
 Options:
   --out <file>        Output file (default: jira-<project>.ushabti.yaml)
+                    Use - to print to stdout instead (attachments are skipped)
   --project <key>     (deprecated) Use the <project-key> argument instead
   --config <file>     Config file path
   -h, --help          Show this help`,
@@ -336,6 +341,7 @@ Options:
   --out <path>             Output file, or output directory with --children
                            Default: <title>-<id>.md or <title>-<id>.ushabti.json
                            Default with --children: confluence-<id>/
+                           Use - to print to stdout instead (attachments are skipped)
   --children               Also download every descendant, as a directory tree
   --id <pageId>            (deprecated) Use the <page-id|url> argument instead
   --config <file>          Config file path
@@ -369,6 +375,7 @@ Options:
   --out <path>             Output file
                            Default: confluence-<id>-comments.md or
                            confluence-<id>-comments.ushabti.json
+                           Use - to print to stdout instead (attachments are skipped)
   --id <pageId>            (deprecated) Use the <page-id|url> argument instead
   --config <file>          Config file path
   -h, --help               Show this help`,

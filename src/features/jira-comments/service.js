@@ -5,7 +5,7 @@ import { toJiraError } from "../../shared/jira-errors.js";
 import { adfToMarkdown } from "../../shared/adf.js";
 import { serialize } from "../../shared/output/json.js";
 import { write } from "../../shared/output/file.js";
-import { findMediaIds, rewriteMediaLinks, downloadMedia } from "../../shared/media-download.js";
+import { findMediaIds, rewriteMediaLinks, downloadMedia, warnMediaSkipped } from "../../shared/media-download.js";
 import { resolveIssueMedia } from "../../shared/jira-media.js";
 
 // Orchestrates: fetch all comments of a single Jira ticket, map to a neutral
@@ -30,7 +30,11 @@ export async function fetchComments({ id, format, out, config }) {
     }
 
     const comments = raw.map(toComment);
-    await downloadCommentsMedia(client, id, comments, dirname(out));
+    if (out.kind === "stdout") {
+        warnMediaSkipped(id, [...new Set(comments.flatMap((c) => findMediaIds(c.body)))]);
+    } else {
+        await downloadCommentsMedia(client, id, comments, dirname(out.path));
+    }
 
     if (format === "markdown") {
         await write(out, toMarkdown(id, comments));

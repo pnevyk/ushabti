@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
 import { InvalidCliInputError } from "../../shared/errors.js";
+import { resolveOut } from "../../shared/cli-args.js";
 import { fetchDigest, isValidDate, resolveMe } from "./service.js";
 
 export async function run(argv) {
@@ -41,7 +42,7 @@ export async function run(argv) {
         reviewer: resolveMe(values.reviewer ?? null, config.github?.username),
         commenter: resolveMe(values.commenter ?? null, config.github?.username),
         commentsBy: resolveMe(values["comments-by"] ?? null, config.github?.username),
-        out: values.out ?? "pr-digest.ushabti.json",
+        out: resolveOut({ explicit: values.out, defaultPath: "pr-digest.ushabti.json" }),
         config,
     });
 }

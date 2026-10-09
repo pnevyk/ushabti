@@ -16,6 +16,20 @@ export function findMediaIds(description) {
     return [...ids];
 }
 
+// Pure: the warning for a document whose attachments are not downloaded
+// because its output goes to stdout.
+export function mediaSkippedMessage(label, count) {
+    return `Skipping ${count} attachment${count === 1 ? "" : "s"} of ${label}: not downloaded when writing to stdout`;
+}
+
+// Warns (stderr) about attachments left undownloaded in stdout mode; no-op
+// when the document references none.
+export function warnMediaSkipped(label, mediaIds) {
+    if (mediaIds.length) {
+        console.warn(mediaSkippedMessage(label, mediaIds.length));
+    }
+}
+
 // Pure: replace each `attachment:<mediaId>` with its resolved local filename.
 // An id with no entry in idToFilename (unmatched attachment) is left as-is.
 export function rewriteMediaLinks(description, idToFilename) {

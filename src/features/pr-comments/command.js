@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
 import { InvalidCliInputError } from "../../shared/errors.js";
-import { expectPositionals, parsePrRef, pickSubject } from "../../shared/cli-args.js";
+import { expectPositionals, parsePrRef, pickSubject, resolveOut } from "../../shared/cli-args.js";
 import { fetchComments } from "./service.js";
 
 export async function run(argv) {
@@ -22,7 +22,7 @@ export async function run(argv) {
     await fetchComments({
         repo,
         pr,
-        out: values.out ?? "pr-comments.ushabti.json",
+        out: resolveOut({ explicit: values.out, defaultPath: "pr-comments.ushabti.json" }),
         all: values.all ?? false,
         config,
     });

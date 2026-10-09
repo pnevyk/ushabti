@@ -6,7 +6,7 @@ import { createJiraClient } from "../../shared/jira-client.js";
 import { toJiraError } from "../../shared/jira-errors.js";
 import { markdownToAdf } from "../../shared/adf.js";
 import { parse, stringify } from "../../shared/frontmatter.js";
-import { write } from "../../shared/output/file.js";
+import { write, pathTarget } from "../../shared/output/file.js";
 
 // Orchestrates: read a markdown file, map frontmatter + body to a Jira issue,
 // create it, and report the new key. With `update`, write the new key back
@@ -33,7 +33,7 @@ export async function createTicket({ file, project, update, config }) {
 
     if (update) {
         const newPath = join(dirname(file), `${created.key}.md`);
-        await write(newPath, applyCreatedId({ data, body, key: created.key }));
+        await write(pathTarget(newPath), applyCreatedId({ data, body, key: created.key }));
         if (newPath !== file) {
             await unlink(file);
         }

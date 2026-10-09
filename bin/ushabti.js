@@ -3,6 +3,14 @@ import { run } from "../src/cli/index.js";
 import { UshabtiError, IoError } from "../src/shared/errors.js";
 import { writeErrorLog } from "../src/shared/log.js";
 
+// A closed pipe (`ushabti ... --out - | head`) is a normal way to stop reading.
+process.stdout.on("error", (err) => {
+    if (err.code === "EPIPE") {
+        process.exit(0);
+    }
+    throw err;
+});
+
 try {
     await run(process.argv.slice(2));
 } catch (err) {

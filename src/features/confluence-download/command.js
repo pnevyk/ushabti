@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
 import { InvalidCliInputError } from "../../shared/errors.js";
-import { expectPositionals, parsePageId, pickSubject } from "../../shared/cli-args.js";
+import { expectPositionals, parsePageId, pickSubject, resolveOut } from "../../shared/cli-args.js";
 import { downloadPage, downloadTree } from "./service.js";
 
 const FORMATS = ["json", "markdown"];
@@ -28,7 +28,7 @@ export async function run(argv) {
 
     const config = loadConfig(values.config);
     if (values.children) {
-        const out = values.out ?? `confluence-${id}`;
+        const out = resolveOut({ explicit: values.out, defaultPath: `confluence-${id}` });
         await downloadTree({ id, format, out, config });
     } else {
         await downloadPage({ id, format, out: values.out, config });

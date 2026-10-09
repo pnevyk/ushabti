@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional `[jira] project` and `[confluence] space` config fields, used when no project/space is given.
 - `jira filter` accepts `--config`.
 - Upgrade guide: `docs/upgrading/0.2.0.md`.
+- `--out -` prints to stdout instead of writing a file, on `jira fetch`, `jira comments`, `jira project`, `confluence download`, `confluence comments`, `pr comments` and `pr digest`. Multi-document output is concatenated; attachments are skipped with a warning.
 
 ### Changed
 

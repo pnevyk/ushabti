@@ -6,7 +6,7 @@ import { createConfluenceClient } from "../../shared/confluence-client.js";
 import { toConfluenceError } from "../../shared/confluence-errors.js";
 import { markdownToAdf } from "../../shared/adf.js";
 import { parse, stringify } from "../../shared/frontmatter.js";
-import { write } from "../../shared/output/file.js";
+import { write, pathTarget } from "../../shared/output/file.js";
 import { nodeFilename } from "../../shared/confluence-naming.js";
 import { plugins, resolveDefaults } from "../../plugins/index.js";
 
@@ -46,7 +46,7 @@ export async function createPage({ space, file, update, config }) {
 
     if (update) {
         const newPath = join(dirname(file), nodeFilename({ id: created.id, title: data.title }, "md"));
-        await write(newPath, applyCreatedId({ data, body, id: created.id }));
+        await write(pathTarget(newPath), applyCreatedId({ data, body, id: created.id }));
         if (newPath !== file) {
             await unlink(file);
         }

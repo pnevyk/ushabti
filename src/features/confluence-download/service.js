@@ -1,13 +1,14 @@
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { isNotFoundError } from "confluence.js";
+import { resolveOut } from "../../shared/cli-args.js";
 import { resolveAtlassian } from "../../shared/secrets.js";
 import { createConfluenceClient } from "../../shared/confluence-client.js";
 import { adfToMarkdown } from "../../shared/adf.js";
 import { serialize } from "../../shared/output/json.js";
 import { stringify } from "../../shared/frontmatter.js";
-import { write, ensureDir } from "../../shared/output/file.js";
+import { write, ensureDir, subTarget, pathTarget } from "../../shared/output/file.js";
 import { nodeBasename, nodeFilename } from "../../shared/confluence-naming.js";
-import { findMediaIds, rewriteMediaLinks, downloadMedia } from "../../shared/media-download.js";
+import { findMediaIds, rewriteMediaLinks, downloadMedia, warnMediaSkipped } from "../../shared/media-download.js";
 import { nextCursor, resolvePageMedia } from "../../shared/confluence-media.js";
 import { toConfluenceError } from "../../shared/confluence-errors.js";
 import { plugins } from "../../plugins/index.js";
@@ -28,9 +29,9 @@ export async function downloadPage({ id, format, out, config }) {
     const mapped = toPage(page);
 
     const ext = format === "markdown" ? "md" : "ushabti.json";
-    const outPath = out ?? nodeFilename(mapped, ext);
-    await downloadNodeMedia(client, mapped, dirname(outPath), credentials);
-    await write(outPath, formatNode(mapped, format));
+    const target = resolveOut({ explicit: out, defaultPath: nodeFilename(mapped, ext) });
+    await downloadNodeMedia(client, mapped, target.kind === "stdout" ? target : pathTarget(dirname(target.path)), credentials);
+    await write(target, formatNode(mapped, format));
 }
 
 // Orchestrates: resolve whether --id is a page or a folder, fetch its entire
@@ -106,14 +107,14 @@ async function fetchDescendants(client, rootType, rootId) {
 async function writeNode(client, mapped, containingDir, format, keptChildrenByParent, credentials) {
     await downloadNodeMedia(client, mapped, containingDir, credentials);
     const ext = format === "markdown" ? "md" : "ushabti.json";
-    await write(join(containingDir, nodeFilename(mapped, ext)), formatNode(mapped, format));
+    await write(containingDir, formatNode(mapped, format), nodeFilename(mapped, ext));
 
     const children = keptChildrenByParent.get(mapped.id) ?? [];
     if (!children.length) {
         return;
     }
 
-    const childDir = join(containingDir, nodeBasename(mapped));
+    const childDir = subTarget(containingDir, nodeBasename(mapped));
     await ensureDir(childDir);
     for (const child of children) {
         let childMapped;
@@ -139,8 +140,12 @@ async function downloadNodeMedia(client, mapped, containingDir, credentials) {
     if (!mediaIds.length) {
         return;
     }
+    if (containingDir.kind === "stdout") {
+        warnMediaSkipped(`${mapped.type} ${mapped.id}`, mediaIds);
+        return;
+    }
     const resolve = await resolvePageMedia(client, Number(mapped.id), credentials);
-    const idToFilename = await downloadMedia({ mediaIds, resolve, containingDir, baseName: nodeBasename(mapped) });
+    const idToFilename = await downloadMedia({ mediaIds, resolve, containingDir: containingDir.path, baseName: nodeBasename(mapped) });
     mapped.description = rewriteMediaLinks(mapped.description, idToFilename);
 }
 

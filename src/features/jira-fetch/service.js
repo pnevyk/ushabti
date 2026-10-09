@@ -1,12 +1,12 @@
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { resolveAtlassian } from "../../shared/secrets.js";
 import { createJiraClient } from "../../shared/jira-client.js";
 import { toJiraError } from "../../shared/jira-errors.js";
 import { adfToMarkdown } from "../../shared/adf.js";
 import { serialize } from "../../shared/output/json.js";
 import { stringify } from "../../shared/frontmatter.js";
-import { write, ensureDir } from "../../shared/output/file.js";
-import { findMediaIds, rewriteMediaLinks, downloadMedia } from "../../shared/media-download.js";
+import { write, ensureDir, pathTarget } from "../../shared/output/file.js";
+import { findMediaIds, rewriteMediaLinks, downloadMedia, warnMediaSkipped } from "../../shared/media-download.js";
 import { resolveIssueMedia } from "../../shared/jira-media.js";
 
 // Orchestrates: query all Jira tickets for a project, map to a neutral shape,
@@ -49,10 +49,16 @@ export async function fetchTickets({ project, id, format, out, config }) {
     }
     const tickets = issues.map((issue) => toTicket(issue, spField, sprintField));
 
-    const mediaDir = format === "markdown" && !id ? out : dirname(out);
-    await ensureDir(mediaDir);
-    for (let i = 0; i < tickets.length; i++) {
-        await downloadTicketMedia(client, issues[i], tickets[i], mediaDir);
+    if (out.kind === "stdout") {
+        for (const ticket of tickets) {
+            warnMediaSkipped(ticket.id, findMediaIds(ticket.description));
+        }
+    } else {
+        const mediaDir = format === "markdown" && !id ? out.path : dirname(out.path);
+        await ensureDir(pathTarget(mediaDir));
+        for (let i = 0; i < tickets.length; i++) {
+            await downloadTicketMedia(client, issues[i], tickets[i], mediaDir);
+        }
     }
 
     if (format === "markdown") {
@@ -62,7 +68,7 @@ export async function fetchTickets({ project, id, format, out, config }) {
         } else {
             for (const ticket of tickets) {
                 const { description, ...meta } = ticket;
-                await write(join(out, `${ticket.id}.md`), stringify(meta, description));
+                await write(out, stringify(meta, description), `${ticket.id}.md`);
             }
         }
     } else {

@@ -11,6 +11,7 @@ import {
     resolveProject,
     resolveSpace,
     expectPositionals,
+    resolveOut,
 } from "../src/shared/cli-args.js";
 import { InvalidCliInputError } from "../src/shared/errors.js";
 
@@ -105,4 +106,16 @@ test("resolveSpace prefers explicit over config and fails when absent", () => {
     assert.equal(resolveSpace({ explicit: "ENG", config: { confluence: { space: "OPS" } } }), "ENG");
     assert.equal(resolveSpace({ config: { confluence: { space: "OPS" } } }), "OPS");
     assert.throws(() => resolveSpace({ config: { confluence: { space: "" } } }), InvalidCliInputError);
+});
+
+test("resolveOut treats \"-\" as stdout", () => {
+    assert.deepEqual(resolveOut({ explicit: "-", defaultPath: "a.md" }), { kind: "stdout" });
+});
+
+test("resolveOut prefers an explicit path over the default", () => {
+    assert.deepEqual(resolveOut({ explicit: "b.md", defaultPath: "a.md" }), { kind: "path", path: "b.md" });
+});
+
+test("resolveOut falls back to the default path", () => {
+    assert.deepEqual(resolveOut({ explicit: undefined, defaultPath: "a.md" }), { kind: "path", path: "a.md" });
 });

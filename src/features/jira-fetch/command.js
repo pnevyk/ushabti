@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
 import { InvalidCliInputError } from "../../shared/errors.js";
-import { expectPositionals, isTicketKey, parseJiraRef, pickSubject, resolveProject, warnDeprecated } from "../../shared/cli-args.js";
+import { expectPositionals, isTicketKey, parseJiraRef, pickSubject, resolveOut, resolveProject, warnDeprecated } from "../../shared/cli-args.js";
 import { fetchTickets } from "./service.js";
 
 const FORMATS = ["json", "markdown"];
@@ -27,7 +27,7 @@ export async function run(argv) {
 
     const config = loadConfig(values.config);
     const { project, id } = resolveArgs({ values, positionals, config });
-    const out = values.out ?? defaultOut(project, format, id);
+    const out = resolveOut({ explicit: values.out, defaultPath: defaultOut(project, format, id) });
     await fetchTickets({ project, id, format, out, config });
 }
 

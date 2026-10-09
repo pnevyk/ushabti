@@ -6,6 +6,11 @@ export function warnDeprecated(message) {
     console.error(`warning: ${message}`);
 }
 
+// Pure: --out value -> output target. "-" means stdout (the Unix convention).
+export function resolveOut({ explicit, defaultPath }) {
+    return explicit === "-" ? { kind: "stdout" } : { kind: "path", path: explicit ?? defaultPath };
+}
+
 export function isTicketKey(value) {
     return TICKET_KEY.test(value);
 }

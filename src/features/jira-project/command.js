@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
-import { expectPositionals, parseJiraRef, pickSubject, resolveProject } from "../../shared/cli-args.js";
+import { expectPositionals, parseJiraRef, pickSubject, resolveOut, resolveProject } from "../../shared/cli-args.js";
 import { fetchProject } from "./service.js";
 
 export async function run(argv) {
@@ -16,7 +16,7 @@ export async function run(argv) {
 
     const config = loadConfig(values.config);
     const project = resolveProject({ explicit: pickProject({ values, positionals }), config });
-    const out = values.out ?? `jira-${project}.ushabti.yaml`;
+    const out = resolveOut({ explicit: values.out, defaultPath: `jira-${project}.ushabti.yaml` });
     await fetchProject({ project, out, config });
 }
 

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { findMediaIds, rewriteMediaLinks } from "../src/shared/media-download.js";
+import { findMediaIds, rewriteMediaLinks, mediaSkippedMessage } from "../src/shared/media-download.js";
 
 test("findMediaIds extracts a single attachment reference", () => {
     assert.deepEqual(findMediaIds("![alt](attachment:abc-123)"), ["abc-123"]);
@@ -45,4 +45,9 @@ test("rewriteMediaLinks rewrites every occurrence of a repeated id", () => {
 test("rewriteMediaLinks leaves an unmatched id untouched", () => {
     const body = "![alt](attachment:missing-id)";
     assert.equal(rewriteMediaLinks(body, new Map()), body);
+});
+
+test("mediaSkippedMessage pluralises the attachment count", () => {
+    assert.equal(mediaSkippedMessage("ABC-1", 1), "Skipping 1 attachment of ABC-1: not downloaded when writing to stdout");
+    assert.equal(mediaSkippedMessage("ABC-1", 2), "Skipping 2 attachments of ABC-1: not downloaded when writing to stdout");
 });

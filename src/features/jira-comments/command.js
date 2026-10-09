@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
 import { InvalidCliInputError } from "../../shared/errors.js";
-import { expectPositionals, parseJiraRef, pickSubject } from "../../shared/cli-args.js";
+import { expectPositionals, parseJiraRef, pickSubject, resolveOut } from "../../shared/cli-args.js";
 import { fetchComments } from "./service.js";
 
 const FORMATS = ["json", "markdown"];
@@ -26,7 +26,7 @@ export async function run(argv) {
         throw new InvalidCliInputError(`${format} is not a valid value for --format. Use one of: ${FORMATS.join(", ")}.`);
     }
 
-    const out = values.out ?? defaultOut(id, format);
+    const out = resolveOut({ explicit: values.out, defaultPath: defaultOut(id, format) });
     const config = loadConfig(values.config);
     await fetchComments({ id, format, out, config });
 }
