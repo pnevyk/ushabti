@@ -5,7 +5,7 @@ import { expectPositionals, isTicketKey, parseJiraRef, pickSubject, resolveOut, 
 import { fetchTickets } from "./service.js";
 
 const FORMATS = ["json", "markdown"];
-const USAGE = "ushabti jira fetch [<ticket-id|project-key>] [--format json|markdown] [--out <path>]";
+const USAGE = "ushabti jira fetch [<ticket-id|project-key>] [--format json|markdown] [--out <path>] [--comments]";
 
 export async function run(argv) {
     const { values, positionals } = parseArgs({
@@ -16,6 +16,7 @@ export async function run(argv) {
             id: { type: "string" },
             format: { type: "string" },
             out: { type: "string" },
+            comments: { type: "boolean" },
             config: { type: "string" },
         },
     });
@@ -28,7 +29,7 @@ export async function run(argv) {
     const config = loadConfig(values.config);
     const { project, id } = resolveArgs({ values, positionals, config });
     const out = resolveOut({ explicit: values.out, defaultPath: defaultOut(project, format, id) });
-    await fetchTickets({ project, id, format, out, config });
+    await fetchTickets({ project, id, format, out, config, comments: values.comments ?? false });
 }
 
 // Pure: positional/flags/config -> { project } (whole project) or { id } (one

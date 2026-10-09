@@ -140,7 +140,7 @@ An image or file attached to a page/ticket downloads to a local file alongside t
 ![Architecture diagram](Architecture-diagram-12345.a1b2c3d4.png)
 ```
 
-Applies to `confluence download` (single page and `--children`), `jira fetch`, and `jira comments` — the read path only. There's no upload path for attaching a brand-new local image back to Confluence or Jira through markdown; uploading a page/ticket only ever touches attachments that already existed when it was downloaded. If a referenced attachment can no longer be matched (deleted, permissions), that one `attachment:` link is left untouched and a warning is printed — the rest of the download still succeeds.
+Applies to `confluence download` (single page and `--children`), and `jira fetch` (including its comments; the deprecated `jira comments` too) — the read path only. There's no upload path for attaching a brand-new local image back to Confluence or Jira through markdown; uploading a page/ticket only ever touches attachments that already existed when it was downloaded. If a referenced attachment can no longer be matched (deleted, permissions), that one `attachment:` link is left untouched and a warning is printed — the rest of the download still succeeds.
 
 ## Macros (Confluence extensions)
 

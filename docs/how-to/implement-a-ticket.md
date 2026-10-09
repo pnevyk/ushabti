@@ -12,16 +12,12 @@ Writes `ABC-123.md`: YAML frontmatter (title, type, parent, story points, assign
 
 You can paste the ticket's browser URL instead of the key.
 
-## 2. Optionally, fetch its comments too
+## 2. Read its comments
 
-```sh
-ushabti jira comments ABC-123
-```
-
-Writes `ABC-123-comments.md`, one section per comment. Useful when the ticket has back-and-forth discussion (clarified scope, a linked design doc, an earlier attempt) that matters as much as the description itself.
+If the ticket has comments, the same command also writes `ABC-123.comments.md`, one section per comment, and links it from the `comments` field in the ticket's frontmatter. Add `--comments` to write the file even when the ticket has none. Useful when the ticket has back-and-forth discussion (clarified scope, a linked design doc, an earlier attempt) that matters as much as the description itself.
 
 ## 3. Point your agent at the file
 
-Run your usual agent workflow (a slash command, a skill, a plain prompt) and point it at `ABC-123.md` (and `ABC-123-comments.md`, if you fetched it) as the spec to implement against.
+Run your usual agent workflow (a slash command, a skill, a plain prompt) and point it at `ABC-123.md` (and `ABC-123.comments.md`, if it was written) as the spec to implement against.
 
 Nothing ushabti-specific is required here — the ticket is now a plain file like any other context you'd hand an agent.

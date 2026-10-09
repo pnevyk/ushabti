@@ -8,10 +8,14 @@ import { stringify } from "../../shared/frontmatter.js";
 import { write, ensureDir, pathTarget } from "../../shared/output/file.js";
 import { findMediaIds, rewriteMediaLinks, downloadMedia, warnMediaSkipped } from "../../shared/media-download.js";
 import { resolveIssueMedia } from "../../shared/jira-media.js";
+import { fetchAllComments, commentsMediaIds, downloadCommentsMedia, toMarkdown as commentsToMarkdown } from "./comments.js";
 
 // Orchestrates: query all Jira tickets for a project, map to a neutral shape,
 // then emit either one JSON file or a directory of per-ticket markdown files.
-export async function fetchTickets({ project, id, format, out, config }) {
+// Comments are fetched for a single ticket, or for every ticket with `comments`;
+// they go to a sibling `<id>.comments.md` (linked from the frontmatter) or, in
+// JSON, into the ticket itself.
+export async function fetchTickets({ project, id, format, out, config, comments = false }) {
     resolveAtlassian(config);
     const spField = config.jira?.storyPointsField || null;
     const sprintField = config.jira?.sprintField || null;
@@ -49,31 +53,64 @@ export async function fetchTickets({ project, id, format, out, config }) {
     }
     const tickets = issues.map((issue) => toTicket(issue, spField, sprintField));
 
+    const commentsById = new Map();
+    if (id || comments) {
+        for (const ticket of tickets) {
+            const list = await fetchAllComments(client, ticket.id);
+            if (list.length || comments) {
+                commentsById.set(ticket.id, list);
+            }
+        }
+    }
+
     if (out.kind === "stdout") {
         for (const ticket of tickets) {
             warnMediaSkipped(ticket.id, findMediaIds(ticket.description));
+            warnMediaSkipped(ticket.id, commentsMediaIds(commentsById.get(ticket.id) ?? []));
         }
     } else {
         const mediaDir = format === "markdown" && !id ? out.path : dirname(out.path);
         await ensureDir(pathTarget(mediaDir));
         for (let i = 0; i < tickets.length; i++) {
             await downloadTicketMedia(client, issues[i], tickets[i], mediaDir);
+            const list = commentsById.get(tickets[i].id);
+            if (list) {
+                await downloadCommentsMedia(client, tickets[i].id, list, mediaDir, issues[i]);
+            }
         }
     }
 
     if (format === "markdown") {
-        if (id) {
-            const { description, ...meta } = tickets[0];
-            await write(out, stringify(meta, description));
-        } else {
-            for (const ticket of tickets) {
-                const { description, ...meta } = ticket;
+        // A single ticket's file sits at `out`; its siblings go in the same directory.
+        const dir = id && out.kind === "path" ? pathTarget(dirname(out.path)) : out;
+        for (const ticket of tickets) {
+            const { description, ...meta } = ticket;
+            const list = commentsById.get(ticket.id);
+            if (list && out.kind === "path") {
+                meta.comments = commentsFileName(ticket.id);
+            }
+            if (id) {
+                await write(out, stringify(meta, description));
+            } else {
                 await write(out, stringify(meta, description), `${ticket.id}.md`);
+            }
+            if (list) {
+                await write(dir, commentsToMarkdown(ticket.id, list), commentsFileName(ticket.id));
             }
         }
     } else {
+        for (const ticket of tickets) {
+            const list = commentsById.get(ticket.id);
+            if (list) {
+                ticket.comments = list;
+            }
+        }
         await write(out, serialize({ tickets }));
     }
+}
+
+function commentsFileName(ticketId) {
+    return `${ticketId}.comments.md`;
 }
 
 // Finds this ticket's own media references and downloads/rewrites them in

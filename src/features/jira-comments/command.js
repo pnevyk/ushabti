@@ -1,13 +1,14 @@
 import { parseArgs } from "node:util";
 import { loadConfig } from "../../shared/config.js";
 import { InvalidCliInputError } from "../../shared/errors.js";
-import { expectPositionals, parseJiraRef, pickSubject, resolveOut } from "../../shared/cli-args.js";
+import { expectPositionals, parseJiraRef, pickSubject, resolveOut, warnDeprecated } from "../../shared/cli-args.js";
 import { fetchComments } from "./service.js";
 
 const FORMATS = ["json", "markdown"];
 const USAGE = "ushabti jira comments <ticket-id> [--format json|markdown] [--out <path>]";
 
 export async function run(argv) {
+    warnDeprecated("`jira comments` is deprecated and will be removed in a future release. Use `ushabti jira fetch <ticket-id>`, which writes the comments next to the ticket.");
     const { values, positionals } = parseArgs({
         args: argv,
         allowPositionals: true,

@@ -11,7 +11,7 @@ Commands:
   pr comments            Fetch unresolved PR review threads to JSON
   pr digest              Fetch merged-PR history in a date window to JSON
   jira fetch             Fetch a ticket or a project's tickets to JSON or markdown
-  jira comments          Fetch a ticket's comments to JSON or markdown
+  jira comments          (deprecated) Use jira fetch; fetches a ticket's comments
   jira project           Fetch a project's people and sprints to a YAML reference file
   jira create            Create a Jira ticket from a markdown file
   jira update            Update a Jira ticket from a markdown file
@@ -141,7 +141,7 @@ Options:
 Note: GitHub search returns at most 1000 results. If a search matches more,
 the digest is capped at 1000 and a warning is printed to stderr; narrow the
 window for very busy repositories to get a complete digest.`,
-    "jira fetch": `Usage: ushabti jira fetch [<ticket-id|project-key>] [--format json|markdown] [--out <path>]
+    "jira fetch": `Usage: ushabti jira fetch [<ticket-id|project-key>] [--format json|markdown] [--out <path>] [--comments]
 
 Fetch a single Jira ticket, or all tickets of a project.
 
@@ -153,6 +153,11 @@ already implies its project. Without an argument, the project is read from the
 Default format is markdown: one <ID>.md per ticket, YAML frontmatter (id,
 title, type, parent, storyPoints, assignee) plus the description body. Pass
 --format json for a single {tickets:[...]} file instead.
+
+When fetching a single ticket that has comments, they are written to
+<ID>.comments.md next to the ticket and linked from its frontmatter
+(comments); with --format json they are added to the ticket as comments.
+Project fetches skip comments unless --comments is given.
 
 Examples:
   ushabti jira fetch ABC
@@ -169,12 +174,17 @@ Options:
   --out <path>             Output directory (markdown) or file (json)
                            Default (project): jira-<project>/ or jira-<project>.ushabti.json
                            Default (ticket): <id>.md or jira-<id>.ushabti.json in cwd
-                           Use - to print to stdout instead (attachments are skipped)
+                           Use - to print to stdout instead (attachments are skipped;
+                           comments follow their ticket)
+  --comments               Always fetch comments, even if a ticket has none or when
+                           fetching a whole project (one extra request per ticket)
   --id <ticket-id>         (deprecated) Use the <ticket-id> argument instead
   --project <key>          (deprecated) Use the <project-key> argument instead
   --config <file>          Config file path
   -h, --help               Show this help`,
     "jira comments": `Usage: ushabti jira comments <ticket-id> [--format json|markdown] [--out <path>]
+
+(deprecated) Use \`ushabti jira fetch <ticket-id>\` instead.
 
 Fetch all comments of a single Jira ticket.
 

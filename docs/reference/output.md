@@ -17,4 +17,6 @@ Writes to stdout instead of a file.
 | Warnings and errors | Always stderr; stdout carries only documents. |
 | Closed pipe (`EPIPE`) | Exits with status 0. |
 
+With `jira fetch`, a ticket's comments document follows the ticket's own content.
+
 Supported by: `jira fetch`, `jira comments`, `jira project`, `confluence download`, `confluence comments`, `pr comments`, `pr digest`.
