@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-09
+
 ### Added
 
 - `jira fetch <ticket-id>` writes the ticket's comments to `<ID>.comments.md` and links it from the ticket frontmatter (`comments`); `--comments` forces it when a ticket has none and for project-wide fetches. With `--format json`, comments are embedded in the ticket; with `--out -`, they follow the ticket.
@@ -50,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `config template` and merged project-local/global TOML configuration.
 - `ui estimate` local browser UI for task estimation.
 
-[Unreleased]: https://github.com/pnevyk/ushabti/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/pnevyk/ushabti/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/pnevyk/ushabti/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/pnevyk/ushabti/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/pnevyk/ushabti/releases/tag/v0.1.0
