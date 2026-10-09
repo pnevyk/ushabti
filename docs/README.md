@@ -12,10 +12,12 @@ It fetches into local files and updates from local files, so an AI agent can rea
   - [Batch manage tickets](how-to/batch-manage-tickets.md)
   - [Feed PR reviews to a compound engineering step](how-to/feed-pr-reviews-to-compound-engineering.md)
   - [Estimate tasks with the UI](how-to/estimate-tasks.md)
+  - [Print output to stdout](how-to/print-output-to-stdout.md)
 - **Upgrading** — what changes between releases and how to migrate.
   - [Upgrading to 0.2.0](upgrading/0.2.0.md)
 - **Reference** — exhaustive lookup material.
   - [Configuration](reference/configuration.md)
+  - [Output destinations](reference/output.md)
   - [ADF ↔ Markdown mapping](reference/adf-markdown.md)
   - [Confluence macro plugins](reference/plugins.md)
 
